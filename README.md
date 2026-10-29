@@ -27,7 +27,7 @@
 
 ## 下载与运行
 
-1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 DaySequence-2.3.1-windows-x64.zip。
+1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 DaySequence-2.3.2-windows-x64.zip。
 2. 完整解压 ZIP，双击文件夹中的 DaySequence.exe。
 3. 保留随附的 DLL 和 plugins 文件夹；不需要另行安装 Qt。
 

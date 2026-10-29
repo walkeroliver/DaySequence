@@ -66,17 +66,7 @@ void MainWindow::preferences() {
                                                     : "天气服务暂未开放");
     city->setClearButtonEnabled(true);
     al->addWidget(city);
-    auto note = label(WeatherThemesAvailable ? "晴暖杏，阴苔绿；雨海蓝，雪雾紫，入夜换深色。"
-                                             : "天气自动换色暂不可用，当前可手动选择界面配色。",
-                      "smallMuted");
-    note->setWordWrap(true);
-    al->addWidget(note);
-    auto service =
-        label(WeatherThemesAvailable ? "天气来源：Open-Meteo。仅在启用后查询你填写的城市。"
-                                     : "天气功能开放前，不会发送城市或天气查询请求。",
-              "smallMuted");
-    service->setWordWrap(true);
-    al->addWidget(service);
+    al->addStretch();
     tabs->addTab(appearance, "外观与天气");
     auto dataPage = new QWidget;
     auto data = column(dataPage, 12);
