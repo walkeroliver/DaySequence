@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(DaySequence VERSION 2.2.0 LANGUAGES CXX)
+project(DaySequence VERSION 2.2.1 LANGUAGES CXX)
 set(CMAKE_INSTALL_BINDIR ".")
 set(CMAKE_INSTALL_LIBDIR ".")
 set(CMAKE_CXX_STANDARD 17)
@@ -19,7 +19,7 @@ qt_add_library(daysequence_ui STATIC
     src/ui/mainwindow.cpp src/ui/mainwindow.h src/ui/appearance.cpp src/ui/preferences.cpp src/ui/weather.cpp
     src/ui/widgets/visuals.cpp src/ui/widgets/visuals.h
     src/ui/widgets/tasklist.cpp src/ui/widgets/tasklist.h
-    src/ui/widgets/choicebox.cpp src/ui/widgets/choicebox.h
+    src/ui/widgets/choicebox.cpp src/ui/widgets/choicebox.h src/ui/widgets/pathlabel.h
     src/ui/components/icons.cpp src/ui/components/icons.h src/ui/components/uicomponents.h
 )
 target_include_directories(daysequence_ui PUBLIC src/ui src/ui/widgets src/ui/components)

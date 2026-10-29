@@ -3,6 +3,7 @@
 #include "choicebox.h"
 #include "icons.h"
 #include "mainwindow.h"
+#include "pathlabel.h"
 #include "storage.h"
 #include "uicomponents.h"
 #include <QtWidgets>
@@ -68,9 +69,7 @@ void MainWindow::preferences() {
     block->setObjectName("settingsBlock");
     auto bl = column(block, 18);
     bl->addWidget(label("保存文件夹", "eyebrow"));
-    auto path = label(QDir::toNativeSeparators(currentDirectory), "storageLocation");
-    path->setWordWrap(true);
-    path->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    auto path = new PathLabel(QDir::toNativeSeparators(currentDirectory));
     path->setToolTip(path->text());
     bl->addWidget(path);
     auto directoryButtons = new QHBoxLayout;

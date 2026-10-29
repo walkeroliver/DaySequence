@@ -435,7 +435,10 @@ class UiTests : public QObject {
     }
     void settingsDataLocationMigration() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-relocate-XXXXXX");
-        const auto source = dir.filePath("data"), destination = dir.filePath("chosen");
+        const auto source = dir.filePath("data"),
+                   destination =
+                       dir.filePath("a-very-long-directory-name-for-the-storage-location-"
+                                    "regression-test/another-long-directory-for-user-plans");
         QVERIFY(QDir().mkpath(source));
         QVERIFY(QDir().mkpath(destination));
         Planner plan(source + "/tasks.json");
@@ -467,8 +470,15 @@ class UiTests : public QObject {
                 }
             });
             choose->click();
-            QCOMPARE(dialog->findChild<QLabel *>("storageLocation")->text(),
-                     QDir::toNativeSeparators(destination));
+            auto location = dialog->findChild<QLabel *>("storageLocation");
+            QVERIFY(location);
+            QCOMPARE(location->text(), QDir::toNativeSeparators(destination));
+            QCOMPARE(location->toolTip(), QDir::toNativeSeparators(destination));
+            QVERIFY(location->fontMetrics().horizontalAdvance(location->text()) >
+                    location->width());
+            QVERIFY(location->height() <= location->fontMetrics().height() + 8);
+            QVERIFY(
+                dialog->rect().contains(location->mapTo(dialog, location->rect().bottomRight())));
             dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Save)->click();
             QTimer::singleShot(30, &window, [&] {
                 auto question = window.findChild<QMessageBox *>();
