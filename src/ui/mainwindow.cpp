@@ -5,6 +5,7 @@
 #include "focusclock.h"
 #include "storage.h"
 #include "tasklist.h"
+#include "weatherdata.h"
 #include <QtWidgets>
 
 #include <QNetworkProxyFactory>
@@ -23,6 +24,10 @@ MainWindow::MainWindow(const QString &file, QWidget *parent, StorageManager *sto
     resize(qMin(1260, screenArea.width() - 32), qMin(894, screenArea.height() - 32));
     setMinimumSize(980, 640);
     QNetworkProxyFactory::setUseSystemConfiguration(true);
+    if (!WeatherThemesAvailable && settings.value("weatherAuto", false).toBool()) {
+        settings.setValue("weatherAuto", false);
+        settings.sync();
+    }
     healthy = model.load();
     QString loadError = model.error;
     build();
@@ -41,12 +46,12 @@ MainWindow::MainWindow(const QString &file, QWidget *parent, StorageManager *sto
                                  loadError + "\n为保护文件，暂时停止编辑。数据位置：\n" +
                                      model.filePath());
         });
-    if (settings.value("weatherAuto", false).toBool())
+    if (WeatherThemesAvailable && settings.value("weatherAuto", false).toBool())
         QTimer::singleShot(500, this, &MainWindow::fetchWeather);
     auto timer = new QTimer(this);
     timer->setInterval(30 * 60 * 1000);
     connect(timer, &QTimer::timeout, this, [this] {
-        if (settings.value("weatherAuto", false).toBool())
+        if (WeatherThemesAvailable && settings.value("weatherAuto", false).toBool())
             fetchWeather();
     });
     timer->start();
@@ -834,6 +839,11 @@ void MainWindow::preview(const QString &folder) {
     QTimer::singleShot(0, this, [this, folder] {
         if (auto dialog = findChild<QDialog *>()) {
             dialog->grab().save(folder + "/appearance-settings.png");
+            if (auto toggle = dialog->findChild<QCheckBox *>("weatherAutoToggle")) {
+                toggle->click();
+                QApplication::processEvents();
+                dialog->grab().save(folder + "/weather-unavailable-tip.png");
+            }
             if (auto tabs = dialog->findChild<QTabWidget *>()) {
                 tabs->setCurrentIndex(1);
                 QApplication::processEvents();

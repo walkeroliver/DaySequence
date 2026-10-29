@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
+#include "centertip.h"
 #include "choicebox.h"
 #include "icons.h"
 #include "mainwindow.h"
 #include "pathlabel.h"
 #include "storage.h"
 #include "uicomponents.h"
+#include "weatherdata.h"
 #include <QtWidgets>
 void MainWindow::preferences() {
     const auto currentDirectory = QFileInfo(model.filePath()).absolutePath();
@@ -44,20 +46,35 @@ void MainWindow::preferences() {
     al->addWidget(label("界面配色", "eyebrow"));
     al->addWidget(themeBox);
     auto autoTheme = new QCheckBox("随天气自动换色");
-    autoTheme->setChecked(settings.value("weatherAuto", false).toBool());
+    autoTheme->setObjectName("weatherAutoToggle");
+    autoTheme->setChecked(WeatherThemesAvailable && settings.value("weatherAuto", false).toBool());
+    auto tip = new CenterTip(&dialog);
+    connect(autoTheme, &QCheckBox::clicked, &dialog, [autoTheme, tip](bool checked) {
+        if (checked && !WeatherThemesAvailable) {
+            const QSignalBlocker blocker(autoTheme);
+            autoTheme->setChecked(false);
+            tip->showMessage("天气自动换色暂不可用\n请先使用手动配色");
+        }
+    });
     connect(themeBox, &QComboBox::activated, &dialog,
             [autoTheme](int) { autoTheme->setChecked(false); });
     al->addWidget(autoTheme);
     auto city = new QLineEdit(settings.value("city").toString());
-    city->setPlaceholderText("城市，例如：北京 / Shanghai");
+    city->setObjectName("weatherCityInput");
+    city->setEnabled(WeatherThemesAvailable);
+    city->setPlaceholderText(WeatherThemesAvailable ? "城市，例如：北京 / Shanghai"
+                                                    : "天气服务暂未开放");
     city->setClearButtonEnabled(true);
     al->addWidget(city);
-    auto note = label(
-        "晴暖杏，阴苔绿；雨海蓝，雪雾紫，入夜换深色。\n每 30 分钟更新一次，离线时沿用上次配色。",
-        "smallMuted");
+    auto note = label(WeatherThemesAvailable ? "晴暖杏，阴苔绿；雨海蓝，雪雾紫，入夜换深色。"
+                                             : "天气自动换色暂不可用，当前可手动选择界面配色。",
+                      "smallMuted");
     note->setWordWrap(true);
     al->addWidget(note);
-    auto service = label("天气来源：Open-Meteo。仅在启用后查询你填写的城市。", "smallMuted");
+    auto service =
+        label(WeatherThemesAvailable ? "天气来源：Open-Meteo。仅在启用后查询你填写的城市。"
+                                     : "天气功能开放前，不会发送城市或天气查询请求。",
+              "smallMuted");
     service->setWordWrap(true);
     al->addWidget(service);
     tabs->addTab(appearance, "外观与天气");
@@ -136,7 +153,7 @@ void MainWindow::preferences() {
     l->addWidget(buttons);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
-        if (autoTheme->isChecked() && city->text().trimmed().isEmpty()) {
+        if (WeatherThemesAvailable && autoTheme->isChecked() && city->text().trimmed().isEmpty()) {
             tabs->setCurrentIndex(0);
             city->setFocus();
             city->setPlaceholderText("请先填写城市名称");
@@ -148,9 +165,9 @@ void MainWindow::preferences() {
         cancelWeatherRequest();
         weatherError.clear();
         settings.setValue("theme", themeBox->currentData());
-        settings.setValue("weatherAuto", autoTheme->isChecked());
+        settings.setValue("weatherAuto", WeatherThemesAvailable && autoTheme->isChecked());
         settings.setValue("city", city->text().trimmed());
-        if (autoTheme->isChecked())
+        if (WeatherThemesAvailable && autoTheme->isChecked())
             fetchWeather();
         else {
             weatherText = themeBox->currentText().section(' ', 0, 0);

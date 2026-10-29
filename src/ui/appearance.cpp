@@ -6,9 +6,10 @@
 #include "mainwindow.h"
 #include "tasklist.h"
 #include "uicomponents.h"
+#include "weatherdata.h"
 #include <QtWidgets>
 void MainWindow::applyTheme() {
-    const auto nextTheme = settings.value("weatherAuto", false).toBool()
+    const auto nextTheme = (WeatherThemesAvailable && settings.value("weatherAuto", false).toBool())
                                ? weatherTheme
                                : settings.value("theme", "forest").toString();
     if (nextTheme == activeTheme) {
@@ -49,6 +50,7 @@ void MainWindow::applyTheme() {
         QPushButton:hover { background:%5; } QPushButton:pressed { color:%6; }
         QPushButton:disabled { color:%4; }
         #clockFinishTime { color:%4; font-size:11px; }
+        #centerTip { background:%1; color:%3; border:1px solid %5; border-radius:12px; font-size:13px; }
         #clockStatus { color:%6; background:%7; padding:7px 12px; border-radius:9px; font-size:11px; }
         #clockPreset { background:%7; color:%4; font-size:11px; padding:9px 4px; border:1px solid transparent; }
         #clockPreset:checked { border:1px solid %6; color:%6; font-weight:600; }

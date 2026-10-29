@@ -20,6 +20,48 @@ class UiTests : public QObject {
         return nullptr;
     }
   private slots:
+    void unavailableWeatherUsesCenteredTipAndKeepsManualTheme() {
+        QTemporaryDir dir(QDir::currentPath() + "/ui-weather-unavailable-XXXXXX");
+        {
+            QSettings previous(dir.filePath("settings.ini"), QSettings::IniFormat);
+            previous.setValue("weatherAuto", true);
+            previous.setValue("theme", "chinese");
+            previous.setValue("weatherTheme", "ocean");
+            previous.setValue("city", "Beijing");
+            previous.sync();
+        }
+        MainWindow window(dir.filePath("tasks.json"));
+        window.show();
+        QTest::qWait(550);
+        QCOMPARE(qApp->property("daysequenceTheme").toString(), QString("chinese"));
+        QTimer::singleShot(30, &window, [&] {
+            auto dialog = window.findChild<QDialog *>();
+            QVERIFY(dialog);
+            auto toggle = dialog->findChild<QCheckBox *>("weatherAutoToggle");
+            auto city = dialog->findChild<QLineEdit *>("weatherCityInput");
+            QVERIFY(toggle && city);
+            QVERIFY(!toggle->isChecked());
+            QVERIFY(!city->isEnabled());
+            toggle->click();
+            QVERIFY(!toggle->isChecked());
+            auto tip = dialog->findChild<QLabel *>("centerTip");
+            QVERIFY(tip && tip->isVisible());
+            QVERIFY(tip->text().contains(QStringLiteral("暂不可用")));
+            QVERIFY((tip->geometry().center() - dialog->rect().center()).manhattanLength() <= 2);
+            QVERIFY(!window.findChild<QMessageBox *>());
+            QTest::qWait(2850);
+            QVERIFY(!tip->isVisible());
+            toggle->click();
+            QCOMPARE(dialog->findChildren<QLabel *>("centerTip").size(), 1);
+            QVERIFY(tip->isVisible());
+            QVERIFY(!toggle->isChecked());
+            dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Save)->click();
+        });
+        window.findChild<QPushButton *>("weatherAction")->click();
+        QSettings saved(dir.filePath("settings.ini"), QSettings::IniFormat);
+        QVERIFY(!saved.value("weatherAuto").toBool());
+        QCOMPARE(saved.value("theme").toString(), QString("chinese"));
+    }
     void focusClockRunsAcrossPagesAndInBackground() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-focus-XXXXXX");
         MainWindow window(dir.filePath("tasks.json"));

@@ -11,7 +11,7 @@
 #include <QtWidgets>
 #include <cmath>
 void MainWindow::updateWeatherCard() {
-    bool automatic = settings.value("weatherAuto", false).toBool();
+    bool automatic = WeatherThemesAvailable && settings.value("weatherAuto", false).toBool();
     QString city = settings.value("city").toString();
     weatherHeading->setText(automatic ? city + " · 天气" : "天气与配色");
     QString primary = weatherText;
@@ -42,7 +42,7 @@ void MainWindow::weatherFailed(const QString &reason, bool cityNotFound) {
     updateWeatherCard();
 }
 void MainWindow::fetchWeather() {
-    if (weatherBusy || !settings.value("weatherAuto", false).toBool())
+    if (!WeatherThemesAvailable || weatherBusy || !settings.value("weatherAuto", false).toBool())
         return;
     QString city = settings.value("city").toString().trimmed();
     if (city.isEmpty())
@@ -107,6 +107,8 @@ void MainWindow::fetchWeather() {
     });
 }
 void MainWindow::fetchForecast(double lat, double lon, const QString &city, int id) {
+    if (!WeatherThemesAvailable)
+        return;
     const auto url = forecastUrl(lat, lon);
     QNetworkRequest request(url);
     request.setTransferTimeout(15000);

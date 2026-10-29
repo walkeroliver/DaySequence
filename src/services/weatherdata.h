@@ -5,6 +5,8 @@
 #include <QString>
 #include <QUrl>
 #include <optional>
+// Keep requests and automatic theme switching disabled until this feature is available.
+inline constexpr bool WeatherThemesAvailable = false;
 struct WeatherReading {
     double temperature = 0;
     int code = 0;
