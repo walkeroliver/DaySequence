@@ -12,7 +12,8 @@ class LifecycleTests : public QObject {
     void exitsProcess_data() {
         QTest::addColumn<QString>("scenario");
         for (const auto &scenario :
-             {"close", "window-close", "sidebar", "hidden-sidebar", "hidden-tray", "minimize"})
+             {"close", "window-close", "close-to-tray", "window-close-to-tray", "sidebar",
+              "hidden-sidebar", "hidden-tray", "minimize"})
             QTest::newRow(scenario) << QString(scenario);
     }
     void exitsProcess() {
@@ -60,6 +61,28 @@ int main(int argc, char **argv) {
     window.show();
     QTimer::singleShot(20, &window, [&] {
         auto tray = window.findChild<QSystemTrayIcon *>();
+        if (scenario.endsWith("to-tray")) {
+            // Force tray visibility under offscreen to exercise the close-to-tray path.
+            tray->show();
+            QSignalSpy exits(&window, &MainWindow::exitRequested);
+            if (scenario == "close-to-tray")
+                window.findChild<QPushButton *>("closeButton")->click();
+            else
+                window.close();
+            if (!window.isHidden() || !tray->isVisible() || !exits.isEmpty()) {
+                app.exit(4);
+                return;
+            }
+            // The process must stay alive after closing, then exit from the hidden tray menu.
+            QTimer::singleShot(80, &window, [tray] {
+                for (auto action : tray->contextMenu()->actions())
+                    if (action->text() == QStringLiteral("退出日序"))
+                        action->trigger();
+            });
+            return;
+        }
+        if (scenario == "close" || scenario == "window-close")
+            tray->hide();
         if (scenario.startsWith("hidden"))
             window.hide();
         if (scenario == "close") {

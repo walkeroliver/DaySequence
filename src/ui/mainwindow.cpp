@@ -86,8 +86,8 @@ void MainWindow::build() {
     maximizeButton->setAccessibleName("最大化");
     auto closeButton = button("", "closeButton");
     closeButton->setIcon(lineIcon("close"));
-    closeButton->setToolTip("退出日序");
-    closeButton->setAccessibleName("退出日序");
+    closeButton->setToolTip("关闭窗口，留在托盘");
+    closeButton->setAccessibleName("关闭窗口");
     for (auto b : {minimize, maximizeButton, closeButton}) {
         b->setFixedSize(36, 32);
         b->setIconSize(QSize(24, 24));
@@ -662,6 +662,13 @@ void MainWindow::requestExit() {
     emit exitRequested();
 }
 void MainWindow::closeEvent(QCloseEvent *event) {
+    if (!quitting && tray && tray->isVisible()) {
+        settings.setValue("windowGeometry", saveGeometry());
+        settings.sync();
+        hide();
+        event->ignore();
+        return;
+    }
     requestExit();
     event->accept();
 }

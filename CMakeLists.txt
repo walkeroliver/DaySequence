@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(DaySequence VERSION 2.2.2 LANGUAGES CXX)
+project(DaySequence VERSION 2.2.3 LANGUAGES CXX)
 set(CMAKE_INSTALL_BINDIR ".")
 set(CMAKE_INSTALL_LIBDIR ".")
 set(CMAKE_CXX_STANDARD 17)
