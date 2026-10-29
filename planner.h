@@ -23,7 +23,6 @@ class Planner {
     explicit Planner(QString file);
     bool load();
     bool save();
-    bool importLegacy(const QString &file);
     QString add(const QDate &date, const QString &title, int priority);
     QVector<Task> forDate(const QDate &date, int sort = 0, const QString &filter = {}) const;
     MonthStats stats(const QDate &month) const;

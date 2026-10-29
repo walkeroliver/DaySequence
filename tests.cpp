@@ -67,22 +67,6 @@ class PlannerTests : public QObject {
         p.remove(a);
         QCOMPARE(p.tasks.size(), 1);
     }
-    void importLegacy() {
-        QTemporaryDir dir(QDir::currentPath() + "/test-XXXXXX");
-        auto legacy = dir.filePath("old.json");
-        QFile f(legacy);
-        QVERIFY(f.open(QIODevice::WriteOnly));
-        f.write(
-            R"({"2026-10-29":[{"text":"one","done":true},{"text":"two","done":false}],"2026-10-30":{"text":"single","done":true}})");
-        f.close();
-        Planner p(dir.filePath("new.json"));
-        QVERIFY(p.importLegacy(legacy));
-        QCOMPARE(p.tasks.size(), 3);
-        QCOMPARE(p.stats(QDate(2026, 10, 1)).done, 2);
-        QVERIFY(p.importLegacy(legacy));
-        QCOMPARE(p.tasks.size(), 3);
-        QVERIFY(QFile::exists(legacy));
-    }
     void damagedFile() {
         QTemporaryDir dir(QDir::currentPath() + "/test-XXXXXX");
         QFile f(dir.filePath("plans.json"));
@@ -138,19 +122,6 @@ class PlannerTests : public QObject {
         QVERIFY(!p.save());
         QVERIFY(file.open(QIODevice::ReadOnly));
         QCOMPARE(file.readAll(), original);
-    }
-    void invalidLegacyIsNotPartiallyImported() {
-        QTemporaryDir dir(QDir::currentPath() + "/invalid-import-XXXXXX");
-        auto legacy = dir.filePath("old.json");
-        QFile file(legacy);
-        QVERIFY(file.open(QIODevice::WriteOnly));
-        file.write(R"({"2026-10-29":[{"text":"valid","done":false},{"text":7,"done":true}]})");
-        file.close();
-        Planner p(dir.filePath("new.json"));
-        QVERIFY(!p.importLegacy(legacy));
-        QVERIFY(p.tasks.isEmpty());
-        QVERIFY(!QFile::exists(p.filePath()));
-        QVERIFY(QFile::exists(legacy));
     }
     void csvEscapesAndFilters() {
         Planner p("unused");

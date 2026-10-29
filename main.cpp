@@ -9,7 +9,6 @@
 #include <QLocalSocket>
 #include <QLockFile>
 #include <QMessageBox>
-#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <memory>
 
@@ -18,7 +17,7 @@ int main(int argc, char *argv[]) {
     QApplication::setStyle("Fusion");
     QCoreApplication::setApplicationName("DaySequence");
     QCoreApplication::setOrganizationName("DaySequence");
-    QCoreApplication::setApplicationVersion("2.1.0");
+    QCoreApplication::setApplicationVersion("2.1.1");
     if (QGuiApplication::platformName() == "offscreen") {
         const auto fonts = qEnvironmentVariable("WINDIR", "C:/Windows") + "/Fonts/";
         QFontDatabase::addApplicationFont(fonts + "msyh.ttc");
@@ -37,10 +36,8 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         directory = temporary->path();
-        QSettings::setDefaultFormat(QSettings::IniFormat);
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, directory);
     } else
-        directory = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        directory = QDir(QCoreApplication::applicationDirPath()).filePath("data");
     if (directory.isEmpty() || !QDir().mkpath(directory)) {
         QMessageBox::warning(nullptr, "无法启动日序", "无法创建数据文件夹：\n" + directory);
         return 1;
@@ -72,7 +69,7 @@ int main(int argc, char *argv[]) {
         QMessageBox::warning(nullptr, "无法启动日序", server.errorString());
         return 1;
     }
-    MainWindow window(directory + "/plans-v2.json", nullptr, !preview);
+    MainWindow window(directory + "/plans-v2.json");
     QObject::connect(&server, &QLocalServer::newConnection, &window, [&] {
         while (server.hasPendingConnections())
             server.nextPendingConnection()->deleteLater();

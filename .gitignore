@@ -1,4 +1,4 @@
-﻿# Generated builds, distributions and local configuration
+# Generated builds, distributions and local configuration
 /build*/
 /dist/
 /artifacts/
@@ -31,3 +31,6 @@ qrc_*.cpp
 Thumbs.db
 .env
 .env.*
+
+# Portable user data must never enter the repository
+/data/

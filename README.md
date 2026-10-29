@@ -1,4 +1,4 @@
-﻿# 日序 · DaySequence
+# 日序 · DaySequence
 
 一款适用于 Windows 的简约每日计划软件：提前安排目标，记录每天的完成情况，用图表回顾整个月。
 
@@ -18,12 +18,12 @@
 - 月度回顾：每日完成数量柱状图、整月完成比例环形图、统计与 CSV 导出。
 - 主题：中式、欧式、美式，以及苔绿、海盐蓝、雾紫、暖杏、夜色。
 - 可选天气主题：根据指定城市的天气自动换色，支持缓存及手动刷新。
-- 本地记录：自动保存、全部计划备份、旧版数据导入。
+- 便携记录：计划和界面偏好存放在程序旁，支持自动保存与全部计划备份。
 - 桌面体验：系统托盘、单实例唤回、窗口位置记忆和小窗口滚动。
 
 ## 下载与运行
 
-1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 `DaySequence-2.1.0-windows-x64.zip`。
+1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 `DaySequence-2.1.1-windows-x64.zip`。
 2. 完整解压 ZIP，双击文件夹中的 `DaySequence.exe`。
 3. 请保留随附的 DLL 和 plugins 文件夹；不需要另行安装 Qt。
 
@@ -33,11 +33,18 @@
 
 ## 数据与隐私
 
-计划保存在本机，通常位于 `%LOCALAPPDATA%/DaySequence/DaySequence/plans-v2.json`，实际位置可在右上角设置 → 数据与备份中查看。卸载或替换程序文件夹不会主动删除计划。
+2.1.1 起默认使用便携模式，所有日序数据都保存在 `DaySequence.exe` 同目录的 `data` 文件夹：
+
+- `data/plans-v2.json`：计划与完成状态。
+- `data/settings.ini`：主题、排序、天气及窗口偏好。
+
+程序需要解压在可写入的位置。退出后复制整个程序文件夹，任务与偏好会一起带走。升级时将原来的 `data` 文件夹保留到新版目录。
+
+若要清空任务，完全退出后备份并删除 `data/plans-v2.json`；若要重置任务和偏好，完全退出后备份并删除整个 `data`。重新启动保持空白，不会恢复旧记录。发布 ZIP 和源码包不含个人 `data`。
 
 天气默认关闭；开启后向 Open-Meteo 发送填写的城市及查询得到的城市坐标，不发送任务内容。程序不包含账号注册或云同步。
 
-首次运行且新数据文件不存在时，可导入旧版 `%LOCALAPPDATA%/Daymark/plans.json`。旧文件保留，两个版本之间不会实时同步。
+新版已删除 Daymark 旧数据读取与导入功能，也不再读取或写入旧版注册表偏好。若你要保留 2.1.0 的当前格式计划，请主动将需要的 `plans-v2.json` 复制到新版的 `data` 中；程序不会自动迁移。
 
 ## 从源码构建
 

@@ -135,53 +135,6 @@ bool Planner::save() {
     }
     return true;
 }
-bool Planner::importLegacy(const QString &legacyPath) {
-    error.clear();
-    if (QFile::exists(path))
-        return true;
-    QFile file(legacyPath);
-    if (!file.exists())
-        return true;
-    if (!file.open(QIODevice::ReadOnly)) {
-        error = file.errorString();
-        return false;
-    }
-    QJsonParseError parse;
-    auto doc = QJsonDocument::fromJson(file.readAll(), &parse);
-    if (parse.error != QJsonParseError::NoError || !doc.isObject()) {
-        error = QStringLiteral("旧版数据无法读取，原文件已保留。");
-        return false;
-    }
-    QVector<Task> imported;
-    const auto root = doc.object();
-    for (auto day = root.begin(); day != root.end(); ++day) {
-        QDate date = QDate::fromString(day.key(), Qt::ISODate);
-        if (!date.isValid() || date.toString(Qt::ISODate) != day.key() ||
-            (!day.value().isArray() && !day.value().isObject())) {
-            error = QStringLiteral("旧版数据包含无效日期或列表，已停止导入以避免丢失记录。");
-            return false;
-        }
-        const auto values = day.value().isArray() ? day.value().toArray() : QJsonArray{day.value()};
-        int order = 0;
-        for (const auto &value : values) {
-            auto object = value.toObject();
-            if (!value.isObject() || !object["text"].isString() ||
-                object["text"].toString().trimmed().isEmpty() || !object["done"].isBool()) {
-                error = QStringLiteral("旧版数据包含无效目标，已停止导入以避免丢失记录。");
-                return false;
-            }
-            imported.append({QUuid::createUuid().toString(QUuid::WithoutBraces),
-                             object["text"].toString(), date, object["done"].toBool(), 0, order++});
-        }
-    }
-    auto previous = tasks;
-    tasks = std::move(imported);
-    if (!save()) {
-        tasks = std::move(previous);
-        return false;
-    }
-    return true;
-}
 QString Planner::add(const QDate &date, const QString &title, int priority) {
     if (!date.isValid() || title.trimmed().isEmpty())
         return {};

@@ -25,8 +25,7 @@ class TaskDelegate;
 class MainWindow : public QMainWindow {
     Q_OBJECT
   public:
-    explicit MainWindow(const QString &dataFile, QWidget *parent = nullptr,
-                        bool allowLegacyImport = true);
+    explicit MainWindow(const QString &dataFile, QWidget *parent = nullptr);
     void preview(const QString &folder);
     void restoreWindow();
 

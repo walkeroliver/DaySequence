@@ -17,7 +17,14 @@ if(!$version){throw '无法读取项目版本号'}
 $build=[IO.Path]::GetFullPath((Join-Path $project $BuildDirectory))
 if(!$build.StartsWith($project+'\',[StringComparison]::OrdinalIgnoreCase)){throw '构建目录必须位于项目内'}
 $output=Join-Path $project 'artifacts'
-$stage=Join-Path $project 'dist/DaySequence'
+$stage=Join-Path $build 'portable/DaySequence'
+$stagePath=[IO.Path]::GetFullPath($stage)
+if(!$stagePath.StartsWith($build+'\',[StringComparison]::OrdinalIgnoreCase)){throw '打包目录必须位于构建目录内'}
+if(Test-Path -LiteralPath ){
+    if(Test-Path -LiteralPath (Join-Path  'data')){throw '暂存目录含便携用户数据，停止清理；请使用其他构建目录打包'}
+    if(((Get-Item -LiteralPath $stagePath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)-ne0){throw '打包目录不能是目录链接'}
+    Remove-Item -LiteralPath $stagePath -Recurse -Force
+}
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 & $CMakePath -S $project -B $build -G Ninja "-DCMAKE_PREFIX_PATH=$QtRoot" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 if($LASTEXITCODE -ne 0){throw 'CMake 配置失败'}
@@ -29,6 +36,7 @@ if($LASTEXITCODE -ne 0){throw '测试未通过，停止打包'}
 & $CMakePath --install $build --prefix $stage
 if($LASTEXITCODE -ne 0){throw '运行库部署失败'}
 $binary=Join-Path $output "DaySequence-$version-windows-x64.zip"
+if(Test-Path -LiteralPath (Join-Path $stage 'data')){throw '发布目录中出现个人 data 数据，停止打包'}
 Compress-Archive -LiteralPath $stage -DestinationPath $binary -Force -CompressionLevel Optimal
 $assets=@($binary)
 if($IncludeSource){

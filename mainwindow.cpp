@@ -10,9 +10,9 @@
 
 #include "icons.h"
 #include "uicomponents.h"
-MainWindow::MainWindow(const QString &file, QWidget *parent, bool allowLegacyImport)
+MainWindow::MainWindow(const QString &file, QWidget *parent)
     : QMainWindow(parent), model(file),
-      settings(QSettings::defaultFormat(), QSettings::UserScope, "DaySequence", "DaySequence") {
+      settings(QFileInfo(file).dir().filePath("settings.ini"), QSettings::IniFormat) {
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     setWindowTitle("日序");
     setWindowIcon(appIcon());
@@ -22,13 +22,6 @@ MainWindow::MainWindow(const QString &file, QWidget *parent, bool allowLegacyImp
     QNetworkProxyFactory::setUseSystemConfiguration(true);
     healthy = model.load();
     QString loadError = model.error;
-    if (healthy && allowLegacyImport && !QFile::exists(file)) {
-        auto legacy = qEnvironmentVariable("LOCALAPPDATA") + "/Daymark/plans.json";
-        if (!model.importLegacy(legacy)) {
-            healthy = false;
-            loadError = model.error;
-        }
-    }
     build();
     setupTray();
     applyTheme();

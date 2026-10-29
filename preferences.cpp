@@ -59,11 +59,11 @@ void MainWindow::preferences() {
     auto dataPage = new QWidget;
     auto data = column(dataPage, 12);
     data->setSpacing(16);
-    data->addWidget(label("你的记录，保存在这台电脑。", "sectionTitle"));
+    data->addWidget(label("任务与偏好，随程序一起保存。", "sectionTitle"));
     auto block = new QFrame;
     block->setObjectName("settingsBlock");
     auto bl = column(block, 18);
-    bl->addWidget(label("数据位置", "eyebrow"));
+    bl->addWidget(label("便携数据位置（计划和界面偏好）", "eyebrow"));
     auto path = new QLineEdit(QFileInfo(model.filePath()).absolutePath());
     path->setReadOnly(true);
     path->setCursorPosition(0);

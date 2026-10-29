@@ -3,16 +3,13 @@
 #include "icons.h"
 #include "mainwindow.h"
 #include "tasklist.h"
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest>
 #include <QtWidgets>
 
 class UiTests : public QObject {
     Q_OBJECT
-    void isolateSettings(const QString &path) {
-        QSettings::setDefaultFormat(QSettings::IniFormat);
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, path);
-    }
     QPushButton *findButton(QWidget &window, const QString &text) {
         for (auto button : window.findChildren<QPushButton *>())
             if (button->text() == text)
@@ -22,7 +19,6 @@ class UiTests : public QObject {
   private slots:
     void dailyWorkflow() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-test-XXXXXX");
-        isolateSettings(dir.path());
         QString file = dir.filePath("plans.json");
         Planner initial(file);
         QVERIFY(initial.save());
@@ -66,7 +62,6 @@ class UiTests : public QObject {
     }
     void largeListKeepsScroll() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-large-XXXXXX");
-        isolateSettings(dir.path());
         QString file = dir.filePath("plans.json");
         Planner p(file);
         for (int i = 0; i < 500; ++i)
@@ -112,7 +107,6 @@ class UiTests : public QObject {
     }
     void editTaskWithDoubleClick() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-edit-XXXXXX");
-        isolateSettings(dir.path());
         QString file = dir.filePath("plans.json");
         Planner p(file);
         p.add(QDate::currentDate(), "before", 0);
@@ -143,7 +137,6 @@ class UiTests : public QObject {
     }
     void chromeAndSettings() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-chrome-XXXXXX");
-        isolateSettings(dir.path());
         QString file = dir.filePath("plans.json");
         Planner p(file);
         QVERIFY(p.save());
@@ -190,7 +183,6 @@ class UiTests : public QObject {
     }
     void themeDialog() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-theme-XXXXXX");
-        isolateSettings(dir.path());
         QString file = dir.filePath("plans.json");
         Planner p(file);
         QVERIFY(p.save());
@@ -223,7 +215,6 @@ class UiTests : public QObject {
     }
     void simplifiedNavigationAndCalendar() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-simple-XXXXXX");
-        isolateSettings(dir.path());
         QString file = dir.filePath("plans.json");
         Planner p(file);
         QVERIFY(p.save());
@@ -278,7 +269,6 @@ class UiTests : public QObject {
     }
     void culturalThemesSaveAndApply() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-cultural-XXXXXX");
-        isolateSettings(dir.path());
         QString file = dir.filePath("plans.json");
         Planner model(file);
         QVERIFY(model.save());
@@ -311,8 +301,7 @@ class UiTests : public QObject {
             auto text = window.findChild<QLabel *>("weatherText");
             QVERIFY(text);
             QCOMPARE(text->text(), Theme::displayName(id));
-            QSettings stored(QSettings::IniFormat, QSettings::UserScope, "DaySequence",
-                             "DaySequence");
+            QSettings stored(dir.filePath("settings.ini"), QSettings::IniFormat);
             QCOMPARE(stored.value("theme").toString(), id);
         }
         const auto a = Theme::named("chinese"), b = Theme::named("european"),
@@ -320,6 +309,91 @@ class UiTests : public QObject {
         QVERIFY(a.accent != b.accent);
         QVERIFY(b.accent != c.accent);
         QCOMPARE(Theme::presets().size(), 8);
+    }
+    void startupNeverRestoresOldData() {
+        QTemporaryDir dir(QDir::currentPath() + "/ui-no-legacy-XXXXXX");
+        const bool hadLocal = qEnvironmentVariableIsSet("LOCALAPPDATA");
+        const auto previous = qgetenv("LOCALAPPDATA");
+        auto restore = qScopeGuard([&] {
+            if (hadLocal)
+                qputenv("LOCALAPPDATA", previous);
+            else
+                qunsetenv("LOCALAPPDATA");
+        });
+        const auto oldRoot = dir.filePath("old-user");
+        QVERIFY(QDir().mkpath(oldRoot + "/Daymark"));
+        qputenv("LOCALAPPDATA", oldRoot.toUtf8());
+        QFile old(oldRoot + "/Daymark/plans.json");
+        QVERIFY(old.open(QIODevice::WriteOnly));
+        const QByteArray original = R"({"2026-10-29":[{"text":"legacy record","done":false}]})";
+        QCOMPARE(old.write(original), original.size());
+        old.close();
+        const auto data = dir.filePath("portable/data");
+        QVERIFY(QDir().mkpath(data));
+        const auto file = data + "/plans-v2.json";
+        {
+            MainWindow window(file);
+            window.show();
+            QTest::qWait(20);
+            auto list = window.findChild<QListView *>("taskList");
+            QVERIFY(list);
+            QCOMPARE(list->model()->rowCount(), 0);
+            QVERIFY(!QFile::exists(file));
+            auto input = window.findChild<QLineEdit *>("taskInput");
+            input->setText("new record");
+            QTest::keyClick(input, Qt::Key_Return);
+            QVERIFY(QFile::exists(file));
+            QCOMPARE(list->model()->rowCount(), 1);
+        }
+        QVERIFY(QFile::remove(file));
+        {
+            MainWindow window(file);
+            window.show();
+            QTest::qWait(20);
+            QCOMPARE(window.findChild<QListView *>("taskList")->model()->rowCount(), 0);
+            QVERIFY(!QFile::exists(file));
+        }
+        QVERIFY(old.open(QIODevice::ReadOnly));
+        QCOMPARE(old.readAll(), original);
+    }
+    void portableTasksAndPreferencesMoveTogether() {
+        QTemporaryDir dir(QDir::currentPath() + "/ui-portable-XXXXXX");
+        const auto a = dir.filePath("first/data"), b = dir.filePath("second/data");
+        QVERIFY(QDir().mkpath(a));
+        QVERIFY(QDir().mkpath(b));
+        Planner plan(a + "/plans-v2.json");
+        plan.add(QDate::currentDate(), "portable task", 1);
+        QVERIFY(plan.save());
+        {
+            QSettings settings(a + "/settings.ini", QSettings::IniFormat);
+            settings.setValue("theme", "chinese");
+            settings.setValue("sort", 2);
+            settings.setValue("weatherAuto", false);
+            settings.sync();
+            QCOMPARE(settings.status(), QSettings::NoError);
+        }
+        {
+            MainWindow window(a + "/plans-v2.json");
+            window.show();
+            QCOMPARE(window.findChild<QLabel *>("weatherText")->text(), QStringLiteral("中式"));
+            QCOMPARE(window.findChild<QListView *>("taskList")->model()->rowCount(), 1);
+        }
+        QVERIFY(QFile::copy(a + "/plans-v2.json", b + "/plans-v2.json"));
+        QVERIFY(QFile::copy(a + "/settings.ini", b + "/settings.ini"));
+        {
+            QSettings settings(a + "/settings.ini", QSettings::IniFormat);
+            settings.setValue("theme", "american");
+            settings.sync();
+        }
+        {
+            MainWindow window(b + "/plans-v2.json");
+            window.show();
+            QCOMPARE(window.findChild<QLabel *>("weatherText")->text(), QStringLiteral("中式"));
+            QCOMPARE(window.findChild<QListView *>("taskList")->model()->rowCount(), 1);
+        }
+        QSettings moved(b + "/settings.ini", QSettings::IniFormat);
+        QCOMPARE(moved.value("sort").toInt(), 2);
+        QCOMPARE(QFileInfo(moved.fileName()).absolutePath(), QFileInfo(b).absoluteFilePath());
     }
 };
 QTEST_MAIN(UiTests)
