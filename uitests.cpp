@@ -330,7 +330,7 @@ class UiTests : public QObject {
         old.close();
         const auto data = dir.filePath("portable/data");
         QVERIFY(QDir().mkpath(data));
-        const auto file = data + "/plans-v2.json";
+        const auto file = data + "/tasks.json";
         {
             MainWindow window(file);
             window.show();
@@ -361,7 +361,7 @@ class UiTests : public QObject {
         const auto a = dir.filePath("first/data"), b = dir.filePath("second/data");
         QVERIFY(QDir().mkpath(a));
         QVERIFY(QDir().mkpath(b));
-        Planner plan(a + "/plans-v2.json");
+        Planner plan(a + "/tasks.json");
         plan.add(QDate::currentDate(), "portable task", 1);
         QVERIFY(plan.save());
         {
@@ -373,12 +373,12 @@ class UiTests : public QObject {
             QCOMPARE(settings.status(), QSettings::NoError);
         }
         {
-            MainWindow window(a + "/plans-v2.json");
+            MainWindow window(a + "/tasks.json");
             window.show();
             QCOMPARE(window.findChild<QLabel *>("weatherText")->text(), QStringLiteral("中式"));
             QCOMPARE(window.findChild<QListView *>("taskList")->model()->rowCount(), 1);
         }
-        QVERIFY(QFile::copy(a + "/plans-v2.json", b + "/plans-v2.json"));
+        QVERIFY(QFile::copy(a + "/tasks.json", b + "/tasks.json"));
         QVERIFY(QFile::copy(a + "/settings.ini", b + "/settings.ini"));
         {
             QSettings settings(a + "/settings.ini", QSettings::IniFormat);
@@ -386,7 +386,7 @@ class UiTests : public QObject {
             settings.sync();
         }
         {
-            MainWindow window(b + "/plans-v2.json");
+            MainWindow window(b + "/tasks.json");
             window.show();
             QCOMPARE(window.findChild<QLabel *>("weatherText")->text(), QStringLiteral("中式"));
             QCOMPARE(window.findChild<QListView *>("taskList")->model()->rowCount(), 1);

@@ -23,7 +23,7 @@
 
 ## 下载与运行
 
-1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 `DaySequence-2.1.1-windows-x64.zip`。
+1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 `DaySequence-2.1.2-windows-x64.zip`。
 2. 完整解压 ZIP，双击文件夹中的 `DaySequence.exe`。
 3. 请保留随附的 DLL 和 plugins 文件夹；不需要另行安装 Qt。
 
@@ -35,16 +35,16 @@
 
 2.1.1 起默认使用便携模式，所有日序数据都保存在 `DaySequence.exe` 同目录的 `data` 文件夹：
 
-- `data/plans-v2.json`：计划与完成状态。
+- `data/tasks.json`：计划与完成状态。
 - `data/settings.ini`：主题、排序、天气及窗口偏好。
 
 程序需要解压在可写入的位置。退出后复制整个程序文件夹，任务与偏好会一起带走。升级时将原来的 `data` 文件夹保留到新版目录。
 
-若要清空任务，完全退出后备份并删除 `data/plans-v2.json`；若要重置任务和偏好，完全退出后备份并删除整个 `data`。重新启动保持空白，不会恢复旧记录。发布 ZIP 和源码包不含个人 `data`。
+若要清空任务，完全退出后备份并删除 `data/tasks.json`；若要重置任务和偏好，完全退出后备份并删除整个 `data`。重新启动保持空白，不会恢复旧记录。发布 ZIP 和源码包不含个人 `data`。
 
 天气默认关闭；开启后向 Open-Meteo 发送填写的城市及查询得到的城市坐标，不发送任务内容。程序不包含账号注册或云同步。
 
-新版已删除 Daymark 旧数据读取与导入功能，也不再读取或写入旧版注册表偏好。若你要保留 2.1.0 的当前格式计划，请主动将需要的 `plans-v2.json` 复制到新版的 `data` 中；程序不会自动迁移。
+新版已删除 Daymark 旧数据读取与导入功能，也不再读取或写入旧版注册表偏好。若你要保留此前便携版的记录，完全退出程序后，将 `data/plans-v2.json` 手动改名为 `data/tasks.json`。更早版本的当前格式文件也可自行复制并改名；程序不会自动迁移。
 
 ## 从源码构建
 

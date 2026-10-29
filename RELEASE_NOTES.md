@@ -1,15 +1,11 @@
-﻿# 日序 v2.1.1
+﻿# 日序 v2.1.2
 
-修复数据删除后被旧版记录自动回填的问题，默认改为便携模式。
+任务数据文件改为更简洁的 tasks.json，便携模式保持不变。
 
-- 删除旧版 Daymark 数据导入功能，启动时不读取旧文件。
-- 计划保存在程序同目录的 data/plans-v2.json。
-- 主题、排序、天气和窗口偏好保存在 data/settings.ini，不再使用旧版注册表偏好。
-- 完全退出并删除计划文件后，重新启动保持空白。
-- 打包使用独立暂存目录，发布包不含个人 data 文件夹。
+- 任务与完成状态：程序旁的 data/tasks.json。
+- 界面偏好：程序旁的 data/settings.ini。
+- 已有便携版记录可在退出程序后，将 data/plans-v2.json 手动改名为 data/tasks.json。
+- 不自动读取旧文件或旧注册表，不自动恢复、导入或迁移记录。
 
-下载 `DaySequence-2.1.1-windows-x64.zip`，完整解压到可写入的位置后运行 `DaySequence.exe`。无需安装 Qt。
-
-升级前请备份需要保留的计划。便携版升级时保留自己的 data 文件夹。2.1.0 的当前格式计划需要自行复制到新版 data 内，程序不会自动迁移。
-
-源码采用 GPL-3.0-only。`DaySequence-2.1.1-source.zip` 为对应源码，SHA256SUMS.txt 提供文件校验值。
+下载 DaySequence-2.1.2-windows-x64.zip，完整解压到可写入的位置后运行 DaySequence.exe。
+源码为 DaySequence-2.1.2-source.zip，SHA256SUMS.txt 提供校验值。源码采用 GPL-3.0-only。

@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     QApplication::setStyle("Fusion");
     QCoreApplication::setApplicationName("DaySequence");
     QCoreApplication::setOrganizationName("DaySequence");
-    QCoreApplication::setApplicationVersion("2.1.1");
+    QCoreApplication::setApplicationVersion("2.1.2");
     if (QGuiApplication::platformName() == "offscreen") {
         const auto fonts = qEnvironmentVariable("WINDIR", "C:/Windows") + "/Fonts/";
         QFontDatabase::addApplicationFont(fonts + "msyh.ttc");
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
         QMessageBox::warning(nullptr, "无法启动日序", server.errorString());
         return 1;
     }
-    MainWindow window(directory + "/plans-v2.json");
+    MainWindow window(directory + "/tasks.json");
     QObject::connect(&server, &QLocalServer::newConnection, &window, [&] {
         while (server.hasPendingConnections())
             server.nextPendingConnection()->deleteLater();
