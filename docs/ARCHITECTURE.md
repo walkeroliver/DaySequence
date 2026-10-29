@@ -34,3 +34,7 @@ scripts/package.ps1 从干净的部署目录收集 Qt 与 MinGW 运行库，运�
 ## 退出行为
 
 MainWindow 的各退出入口统一调用 requestExit，保存偏好、取消网络请求、隐藏托盘后发送 exitRequested。应用入口将信号排队连接到 quit，确保窗口已经隐藏时也结束事件循环；单实例服务与目录锁随入口栈对象销毁释放。托盘可见时窗口关闭只保存偏好并隐藏窗口；托盘不可用时关闭会退出。托盘菜单和电源按钮直接进入统一退出流程，不再依赖 close 或 lastWindowClosed。lifecycle_tests 使用独立子进程验证隐藏和可见窗口的退出，并检查已保存任务与偏好。
+
+## 专注时钟
+
+Countdown 位于 src/core，通过 QElapsedTimer 计算实际经过的时间，QTimer 只负责刷新，不累减固定秒数。状态为准备、运行、暂停、完成；完成信号每轮只发出一次。FocusClock 位于 src/ui/widgets，负责时长输入、预设、环形绘制和交互，界面切页不会销毁计时器。主窗口接收完成信号并负责系统提示音和托盘提醒。仅时长与提示音偏好写入 settings.ini，运行中的计时会话不跨程序重启保留。

@@ -10,11 +10,14 @@
 
 ![月度回顾](docs/images/monthly.png)
 
+![专注时钟](docs/images/clock.png)
+
 截图使用示例数据。
 
 ## 功能
 
 - 每日计划：按日期添加、编辑、完成目标，支持优先级、排序与搜索。
+- 专注时钟：自定义时、分、秒，15/25/45/60 分钟预设，开始、暂停、继续与重置。环形进度跟随主题，支持后台计时与结束提醒。
 - 月度回顾：每日完成数量柱状图、整月完成比例环形图、统计与 CSV 导出。
 - 主题：中式、欧式、美式，以及苔绿、海盐蓝、雾紫、暖杏、夜色。
 - 可选天气主题：根据指定城市的天气自动换色，支持缓存及手动刷新。
@@ -24,7 +27,7 @@
 
 ## 下载与运行
 
-1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 DaySequence-2.2.3-windows-x64.zip。
+1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 DaySequence-2.3.0-windows-x64.zip。
 2. 完整解压 ZIP，双击文件夹中的 DaySequence.exe。
 3. 保留随附的 DLL 和 plugins 文件夹；不需要另行安装 Qt。
 

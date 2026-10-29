@@ -2,6 +2,7 @@
 // Copyright (C) 2026 WalkerOliver
 #include "mainwindow.h"
 #include "choicebox.h"
+#include "focusclock.h"
 #include "storage.h"
 #include "tasklist.h"
 #include <QtWidgets>
@@ -78,7 +79,7 @@ void MainWindow::build() {
     chrome->addSpacing(18);
     auto minimize = button("", "chromeButton");
     minimize->setIcon(lineIcon("min"));
-    minimize->setToolTip("最小化到托盘");
+    minimize->setToolTip("最小化");
     minimize->setAccessibleName("最小化");
     maximizeButton = button("", "chromeButton");
     maximizeButton->setIcon(lineIcon("max"));
@@ -121,10 +122,14 @@ void MainWindow::build() {
     side->addSpacing(40);
     dailyNav = button("每日计划", "nav");
     reviewNav = button("月度回顾", "nav");
+    clockNav = button("专注时钟", "nav");
+    clockNav->setAccessibleName("专注时钟");
+    clockNav->setCheckable(true);
     dailyNav->setCheckable(true);
     reviewNav->setCheckable(true);
     side->addWidget(dailyNav);
     side->addWidget(reviewNav);
+    side->addWidget(clockNav);
     side->addStretch();
     auto quote = label("让每一个小目标\n都有完成的回响。", "sideQuote");
     side->addWidget(quote);
@@ -138,6 +143,7 @@ void MainWindow::build() {
     side->addWidget(quit, 0, Qt::AlignLeft);
     connect(dailyNav, &QPushButton::clicked, this, [this] { selectPage(0); });
     connect(reviewNav, &QPushButton::clicked, this, [this] { selectPage(1); });
+    connect(clockNav, &QPushButton::clicked, this, [this] { selectPage(2); });
     connect(quit, &QPushButton::clicked, this, &MainWindow::requestExit);
     shell->addWidget(sidebar);
     auto content = new QWidget;
@@ -414,6 +420,16 @@ void MainWindow::build() {
     il->addWidget(insight);
     rl->addWidget(insightCard);
     pages->addWidget(scrollPage(review));
+    focusClock = new FocusClock(settings);
+    pages->addWidget(scrollPage(focusClock));
+    connect(focusClock, &FocusClock::completed, this, [this](bool sound) {
+        if (sound)
+            QApplication::beep();
+        if (tray && tray->isVisible())
+            tray->showMessage("专注完成", "这一段专注已完成，起身活动一下吧。",
+                              QSystemTrayIcon::Information, 5000);
+        QApplication::alert(this, 5000);
+    });
     auto foot = new QHBoxLayout;
     saveStatus = label("●  所有更改自动保存在本机", "smallMuted");
     foot->addWidget(saveStatus);
@@ -620,9 +636,14 @@ void MainWindow::selectPage(int page) {
     pages->setCurrentIndex(page);
     dailyNav->setChecked(page == 0);
     reviewNav->setChecked(page == 1);
-    pageTitle->setText(page == 0 ? "把今天，过得有条理。" : "每一份努力，都看得见。");
-    pageSubtitle->setText(page == 0 ? "先安排重要的事，再一步一步完成。"
-                                    : "回看一个月的节奏，为下个月留一点灵感。");
+    clockNav->setChecked(page == 2);
+    const QStringList titles = {"把今天，过得有条理。", "每一份努力，都看得见。",
+                                "把此刻，留给一件事。"};
+    const QStringList subtitles = {"先安排重要的事，再一步一步完成。",
+                                   "回看一个月的节奏，为下个月留一点灵感。",
+                                   "设定一段时间，让注意力慢慢沉淀。"};
+    pageTitle->setText(titles.value(page));
+    pageSubtitle->setText(subtitles.value(page));
 }
 void MainWindow::changeMonth(int delta) {
     month = month.addMonths(delta);
@@ -636,6 +657,10 @@ void MainWindow::setupTray() {
     menu->addAction("打开日序", this, [this] { restoreWindow(); });
     menu->addAction("退出日序", this, &MainWindow::requestExit);
     tray->setContextMenu(menu);
+    connect(tray, &QSystemTrayIcon::messageClicked, this, [this] {
+        selectPage(2);
+        restoreWindow();
+    });
     connect(tray, &QSystemTrayIcon::activated, this, [this](auto reason) {
         if (reason == QSystemTrayIcon::DoubleClick || reason == QSystemTrayIcon::Trigger) {
             restoreWindow();
@@ -767,7 +792,13 @@ void MainWindow::preview(const QString &folder) {
     resize(1024, 700);
     QApplication::processEvents();
     grab().save(folder + "/compact.png");
+    selectPage(2);
+    QApplication::processEvents();
+    grab().save(folder + "/clock-compact.png");
     resize(1260, 894);
+    selectPage(2);
+    QApplication::processEvents();
+    grab().save(folder + "/clock.png");
     for (const auto &id : QStringList{"chinese", "european", "american"}) {
         settings.setValue("theme", id);
         settings.setValue("weatherAuto", false);
@@ -778,6 +809,9 @@ void MainWindow::preview(const QString &folder) {
         selectPage(1);
         QApplication::processEvents();
         grab().save(folder + "/theme-" + id + "-monthly.png");
+        selectPage(2);
+        QApplication::processEvents();
+        grab().save(folder + "/clock-" + id + ".png");
     }
     settings.setValue("theme", "forest");
     settings.setValue("weatherAuto", false);

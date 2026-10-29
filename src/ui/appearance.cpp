@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
 #include "choicebox.h"
+#include "focusclock.h"
 #include "icons.h"
 #include "mainwindow.h"
 #include "tasklist.h"
@@ -47,6 +48,15 @@ void MainWindow::applyTheme() {
         QPushButton { background:%7; border:0; border-radius:8px; padding:9px 13px; }
         QPushButton:hover { background:%5; } QPushButton:pressed { color:%6; }
         QPushButton:disabled { color:%4; }
+        #clockFinishTime { color:%4; font-size:11px; }
+        #clockStatus { color:%6; background:%7; padding:7px 12px; border-radius:9px; font-size:11px; }
+        #clockPreset { background:%7; color:%4; font-size:11px; padding:9px 4px; border:1px solid transparent; }
+        #clockPreset:checked { border:1px solid %6; color:%6; font-weight:600; }
+        #clockHours, #clockMinutes, #clockSeconds { background:%7; color:%1; border:1px solid %5; border-radius:10px; font-family:'Segoe UI'; font-size:26px; padding:4px; }
+        #clockHours:focus, #clockMinutes:focus, #clockSeconds:focus { border:1px solid %6; }
+        #clockStart { background:%6; color:%3; font-weight:600; border-radius:10px; }
+        #clockStart:hover { border:1px solid %6; }
+        #clockReset { background:transparent; color:%4; } #clockReset:hover { background:%7; color:%6; }
         #nav { text-align:left; padding:13px 12px; background:transparent; color:%4; font-size:14px; }
         #nav:checked { background:%7; color:%6; font-weight:600; } #nav:hover { background:%7; }
         #primary { background:%6; color:white; font-weight:600; } #primary:hover { padding:9px 13px; border:1px solid %6; }
@@ -79,6 +89,7 @@ void MainWindow::applyTheme() {
     for (auto b : findChildren<QPushButton *>("exitEntry"))
         b->setIcon(lineIcon("power", theme.accent));
     updateWeatherCard();
+    focusClock->setTheme(theme);
     calendar->theme = theme;
     calendar->update();
     bars->theme = theme;

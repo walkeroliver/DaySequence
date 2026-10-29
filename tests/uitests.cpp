@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
 #include "choicebox.h"
+#include "focusclock.h"
 #include "icons.h"
 #include "mainwindow.h"
 #include "storage.h"
@@ -19,6 +20,70 @@ class UiTests : public QObject {
         return nullptr;
     }
   private slots:
+    void focusClockRunsAcrossPagesAndInBackground() {
+        QTemporaryDir dir(QDir::currentPath() + "/ui-focus-XXXXXX");
+        MainWindow window(dir.filePath("tasks.json"));
+        window.resize(1024, 700);
+        window.show();
+        auto clock = window.findChild<FocusClock *>();
+        QVERIFY(clock);
+        auto nav = findButton(window, QStringLiteral("专注时钟"));
+        QVERIFY(nav);
+        nav->click();
+        auto hours = clock->findChild<QSpinBox *>("clockHours");
+        auto minutes = clock->findChild<QSpinBox *>("clockMinutes");
+        auto seconds = clock->findChild<QSpinBox *>("clockSeconds");
+        auto start = clock->findChild<QPushButton *>("clockStart");
+        auto reset = clock->findChild<QPushButton *>("clockReset");
+        QVERIFY(hours && minutes && seconds && start && reset);
+        clock->findChild<QCheckBox *>("clockSound")->setChecked(false);
+        hours->setValue(0);
+        minutes->setValue(0);
+        seconds->setValue(0);
+        QVERIFY(!start->isEnabled());
+        seconds->setValue(1);
+        QVERIFY(start->isEnabled());
+        QSignalSpy completed(clock, &FocusClock::completed);
+        start->click();
+        QCOMPARE(clock->countdown()->state(), Countdown::State::Running);
+        QVERIFY(!minutes->isEnabled());
+        start->click();
+        QCOMPARE(clock->countdown()->state(), Countdown::State::Paused);
+        auto remaining = clock->countdown()->remaining();
+        QTest::qWait(130);
+        QCOMPARE(clock->countdown()->remaining(), remaining);
+        start->click();
+        findButton(window, QStringLiteral("每日计划"))->click();
+        window.hide();
+        QTRY_COMPARE_WITH_TIMEOUT(completed.count(), 1, 2500);
+        QCOMPARE(clock->countdown()->state(), Countdown::State::Finished);
+        window.restoreWindow();
+        nav->click();
+        reset->click();
+        QCOMPARE(clock->countdown()->state(), Countdown::State::Ready);
+        QCOMPARE(clock->countdown()->remaining(), qint64(1000));
+        QVERIFY(minutes->isEnabled());
+        auto dial = clock->findChild<QWidget *>("focusDial");
+        QVERIFY(dial);
+        QVERIFY(window.rect().contains(dial->mapTo(&window, dial->rect().bottomRight())));
+    }
+    void focusDurationAndSoundPreferencesPersist() {
+        QTemporaryDir dir(QDir::currentPath() + "/ui-focus-prefs-XXXXXX");
+        {
+            QSettings preferences(dir.filePath("settings.ini"), QSettings::IniFormat);
+            FocusClock clock(preferences);
+            for (auto preset : clock.findChildren<QPushButton *>("clockPreset"))
+                if (preset->text() == QStringLiteral("45 分"))
+                    preset->click();
+            QCOMPARE(clock.countdown()->duration(), qint64(45 * 60 * 1000));
+            clock.findChild<QCheckBox *>("clockSound")->setChecked(false);
+            preferences.sync();
+        }
+        QSettings preferences(dir.filePath("settings.ini"), QSettings::IniFormat);
+        FocusClock reopened(preferences);
+        QCOMPARE(reopened.countdown()->duration(), qint64(45 * 60 * 1000));
+        QVERIFY(!reopened.findChild<QCheckBox *>("clockSound")->isChecked());
+    }
     void dailyWorkflow() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-test-XXXXXX");
         QString file = dir.filePath("plans.json");

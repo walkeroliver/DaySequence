@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
+#include "countdown.h"
 #include "planner.h"
 #include "weatherdata.h"
 #include <QFile>
@@ -12,6 +13,41 @@
 class PlannerTests : public QObject {
     Q_OBJECT
   private slots:
+    void countdownUsesElapsedTimeAndFinishesOnce() {
+        Countdown clock;
+        QVERIFY(!clock.setDuration(0));
+        QVERIFY(!clock.setDuration(86400000));
+        QVERIFY(clock.setDuration(250));
+        QSignalSpy completed(&clock, &Countdown::finished);
+        clock.start();
+        QVERIFY(!clock.setDuration(1000));
+        QTest::qSleep(300); // Deliberately block timer events; elapsed time must still reach zero.
+        QCOMPARE(clock.remaining(), qint64(0));
+        QTRY_COMPARE(completed.count(), 1);
+        QCOMPARE(clock.state(), Countdown::State::Finished);
+        QTest::qWait(140);
+        QCOMPARE(completed.count(), 1);
+    }
+    void countdownPauseResumeAndReset() {
+        Countdown clock;
+        QVERIFY(clock.setDuration(400));
+        clock.start();
+        QTest::qWait(70);
+        clock.pause();
+        QCOMPARE(clock.state(), Countdown::State::Paused);
+        const auto paused = clock.remaining();
+        QVERIFY(paused > 0 && paused < clock.duration());
+        QTest::qWait(120);
+        QCOMPARE(clock.remaining(), paused);
+        clock.start();
+        QTRY_COMPARE_WITH_TIMEOUT(clock.state(), Countdown::State::Finished, 1500);
+        clock.start();
+        QCOMPARE(clock.state(), Countdown::State::Running);
+        QVERIFY(clock.remaining() > 300);
+        clock.reset();
+        QCOMPARE(clock.state(), Countdown::State::Ready);
+        QCOMPARE(clock.remaining(), clock.duration());
+    }
     void roundTrip() {
         QTemporaryDir dir(QDir::currentPath() + "/test-XXXXXX");
         Planner p(dir.filePath("plans.json"));

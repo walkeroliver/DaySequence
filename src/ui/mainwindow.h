@@ -23,6 +23,7 @@ class QTimer;
 class StorageManager;
 class TaskListModel;
 class TaskDelegate;
+class FocusClock;
 class MainWindow : public QMainWindow {
     Q_OBJECT
   public:
@@ -74,7 +75,8 @@ class MainWindow : public QMainWindow {
     QLabel *pageTitle, *pageSubtitle, *weatherLabel, *monthLabel, *dayLabel, *dayCaption,
         *progressCaption, *monthCaption, *reviewMonth, *insight, *saveStatus;
     QVector<QLabel *> metricValues, metricNotes;
-    QPushButton *dailyNav, *reviewNav;
+    QPushButton *dailyNav, *reviewNav, *clockNav;
+    FocusClock *focusClock;
     QSystemTrayIcon *tray = nullptr;
     void build();
     void refresh();

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(DaySequence VERSION 2.2.3 LANGUAGES CXX)
+project(DaySequence VERSION 2.3.0 LANGUAGES CXX)
 set(CMAKE_INSTALL_BINDIR ".")
 set(CMAKE_INSTALL_LIBDIR ".")
 set(CMAKE_CXX_STANDARD 17)
@@ -10,6 +10,7 @@ qt_standard_project_setup()
 
 qt_add_library(daysequence_data STATIC
     src/core/planner.cpp src/core/planner.h
+    src/core/countdown.cpp src/core/countdown.h
     src/services/weatherdata.cpp src/services/weatherdata.h
     src/services/storage.cpp src/services/storage.h
 )
@@ -18,6 +19,7 @@ target_link_libraries(daysequence_data PUBLIC Qt6::Core)
 qt_add_library(daysequence_ui STATIC
     src/ui/mainwindow.cpp src/ui/mainwindow.h src/ui/appearance.cpp src/ui/preferences.cpp src/ui/weather.cpp
     src/ui/widgets/visuals.cpp src/ui/widgets/visuals.h
+    src/ui/widgets/focusclock.cpp src/ui/widgets/focusclock.h
     src/ui/widgets/tasklist.cpp src/ui/widgets/tasklist.h
     src/ui/widgets/choicebox.cpp src/ui/widgets/choicebox.h src/ui/widgets/pathlabel.h
     src/ui/components/icons.cpp src/ui/components/icons.h src/ui/components/uicomponents.h
