@@ -20,8 +20,8 @@ $output=Join-Path $project 'artifacts'
 $stage=Join-Path $build 'portable/DaySequence'
 $stagePath=[IO.Path]::GetFullPath($stage)
 if(!$stagePath.StartsWith($build+'\',[StringComparison]::OrdinalIgnoreCase)){throw '打包目录必须位于构建目录内'}
-if(Test-Path -LiteralPath ){
-    if(Test-Path -LiteralPath (Join-Path  'data')){throw '暂存目录含便携用户数据，停止清理；请使用其他构建目录打包'}
+if(Test-Path -LiteralPath $stagePath){
+    if(Test-Path -LiteralPath (Join-Path $stagePath 'data')){throw '暂存目录含便携用户数据，停止清理；请使用其他构建目录打包'}
     if(((Get-Item -LiteralPath $stagePath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)-ne0){throw '打包目录不能是目录链接'}
     Remove-Item -LiteralPath $stagePath -Recurse -Force
 }
