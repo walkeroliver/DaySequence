@@ -1,0 +1,33 @@
+﻿# Generated builds, distributions and local configuration
+/build*/
+/dist/
+/artifacts/
+/preview/
+/.preview-*/
+/.qtcreator/
+/CMakeUserPresets.json
+CMakeLists.txt.user*
+*.pro.user*
+
+# Compiler and IDE outputs
+*.o
+*.obj
+*.a
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.qm
+*.moc
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# Local files and temporary data
+*.log
+*.autosave
+*~
+.DS_Store
+Thumbs.db
+.env
+.env.*
