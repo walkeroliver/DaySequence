@@ -34,3 +34,6 @@ Thumbs.db
 
 # Portable user data must never enter the repository
 /data/
+
+# Local storage location preference
+/storage.json

@@ -20,14 +20,19 @@ class QSystemTrayIcon;
 class QCloseEvent;
 class QNetworkReply;
 class QTimer;
+class StorageManager;
 class TaskListModel;
 class TaskDelegate;
 class MainWindow : public QMainWindow {
     Q_OBJECT
   public:
-    explicit MainWindow(const QString &dataFile, QWidget *parent = nullptr);
+    explicit MainWindow(const QString &dataFile, QWidget *parent = nullptr,
+                        StorageManager *storage = nullptr);
     void preview(const QString &folder);
     void restoreWindow();
+
+  signals:
+    void restartRequested();
 
   protected:
     void closeEvent(QCloseEvent *event) override;
@@ -35,6 +40,7 @@ class MainWindow : public QMainWindow {
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
+    StorageManager *storageManager;
     Planner model;
     QSettings settings;
     QNetworkAccessManager network;

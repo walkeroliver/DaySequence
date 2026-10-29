@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
 #include "mainwindow.h"
+#include "choicebox.h"
+#include "storage.h"
 #include "tasklist.h"
 #include <QtWidgets>
 
@@ -10,8 +12,8 @@
 
 #include "icons.h"
 #include "uicomponents.h"
-MainWindow::MainWindow(const QString &file, QWidget *parent)
-    : QMainWindow(parent), model(file),
+MainWindow::MainWindow(const QString &file, QWidget *parent, StorageManager *storage)
+    : QMainWindow(parent), storageManager(storage), model(file),
       settings(QFileInfo(file).dir().filePath("settings.ini"), QSettings::IniFormat) {
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     setWindowTitle("日序");
@@ -275,10 +277,14 @@ void MainWindow::build() {
     entry->addWidget(add);
     tl->addLayout(entry);
     auto controls = new QHBoxLayout;
-    priority = new QComboBox;
+    priority = new ChoiceBox;
+    priority->setObjectName("prioritySelector");
+    priority->setAccessibleName("新目标优先级");
     priority->addItems({"普通优先级", "重要", "紧急"});
     priority->setToolTip("新目标的优先级");
-    sort = new QComboBox;
+    sort = new ChoiceBox;
+    sort->setObjectName("sortSelector");
+    sort->setAccessibleName("目标排序");
     sort->addItems({"手动排序", "未完成优先", "优先级排序", "按名称排序"});
     sort->setCurrentIndex(qBound(0, settings.value("sort", 0).toInt(), 3));
     controls->addWidget(priority);
@@ -585,7 +591,7 @@ void MainWindow::editTask(const QString &id) {
     l->addWidget(label("让目标更清晰", "sectionTitle"));
     auto input = new QLineEdit(t->title);
     input->setMaxLength(200);
-    auto pr = new QComboBox;
+    auto pr = new ChoiceBox;
     pr->addItems({"普通", "重要", "紧急"});
     pr->setCurrentIndex(t->priority);
     auto date = new QDateEdit(t->date);
@@ -774,4 +780,38 @@ void MainWindow::preview(const QString &folder) {
         QApplication::processEvents();
         grab().save(folder + "/theme-" + id + "-monthly.png");
     }
+    settings.setValue("theme", "forest");
+    settings.setValue("weatherAuto", false);
+    applyTheme();
+    selectPage(0);
+    QApplication::processEvents();
+    if (auto selector = qobject_cast<ChoiceBox *>(sort)) {
+        selector->showPopup();
+        QApplication::processEvents();
+        auto popup = selector->findChild<QFrame *>("choicePopup");
+        auto image = grab();
+        if (popup) {
+            popup->grab().save(folder + "/sort-choices.png");
+            QPainter painter(&image);
+            painter.drawPixmap(mapFromGlobal(popup->pos()), popup->grab());
+        }
+        image.save(folder + "/sort-popup.png");
+        selector->hidePopup();
+    }
+    QTimer::singleShot(0, this, [this, folder] {
+        if (auto dialog = findChild<QDialog *>()) {
+            dialog->grab().save(folder + "/appearance-settings.png");
+            if (auto tabs = dialog->findChild<QTabWidget *>()) {
+                tabs->setCurrentIndex(1);
+                QApplication::processEvents();
+                dialog->grab().save(folder + "/storage-settings.png");
+            }
+            dialog->reject();
+        }
+    });
+    StorageManager previewStorage(QFileInfo(model.filePath()).absolutePath());
+    auto originalStorage = storageManager;
+    storageManager = &previewStorage;
+    preferences();
+    storageManager = originalStorage;
 }

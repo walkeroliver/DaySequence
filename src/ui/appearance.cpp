@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
+#include "choicebox.h"
 #include "icons.h"
 #include "mainwindow.h"
 #include "tasklist.h"
@@ -52,9 +53,8 @@ void MainWindow::applyTheme() {
         #secondary { background:%7; color:%6; font-size:12px; }
         #monthSelector { font-size:11px; color:%4; background:transparent; padding:6px 4px; } #monthSelector:hover { color:%6; }
 
-        QLineEdit,QComboBox,QDateEdit { background:%3; border:1px solid %5; border-radius:8px; padding:8px; selection-background-color:%6; }
-        QLineEdit:focus { border:1px solid %6; } QComboBox { font-size:11px; }
-        QComboBox::drop-down { border:none; width:20px; } QComboBox QAbstractItemView { background:%3; selection-background-color:%7; selection-color:%1; }
+        QLineEdit,QDateEdit { background:%3; border:1px solid %5; border-radius:8px; padding:8px; selection-background-color:%6; }
+        QLineEdit:focus { border:1px solid %6; }
         #taskList { background:transparent; border:0; outline:none; } #taskList::item { background:transparent; border:0; }
         QCheckBox::indicator { width:19px; height:19px; border:1px solid %4; border-radius:6px; background:%3; }
         QCheckBox::indicator:checked { background:%6; border:1px solid %6; image:url(:/check.svg); }
@@ -67,7 +67,10 @@ void MainWindow::applyTheme() {
     )")
                       .arg(c(theme.text), c(theme.bg), c(theme.panel), c(theme.muted),
                            c(theme.line), c(theme.accent), c(theme.soft));
+    qApp->setProperty("daysequenceTheme", activeTheme);
     qApp->setStyleSheet(css);
+    for (auto box : findChildren<ChoiceBox *>())
+        box->setTheme(theme);
     for (auto b : findChildren<QPushButton *>("chromeButton"))
         b->setIcon(lineIcon(b == maximizeButton ? (isMaximized() ? "restore" : "max") : "min",
                             theme.muted));

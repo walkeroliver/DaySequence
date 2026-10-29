@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
+#include "choicebox.h"
 #include "icons.h"
 #include "mainwindow.h"
+#include "storage.h"
 #include "tasklist.h"
 #include <QScopeGuard>
 #include <QTemporaryDir>
@@ -148,7 +150,7 @@ class UiTests : public QObject {
         QVERIFY(window.findChildren<QPushButton *>("square").isEmpty());
         for (auto l : window.findChildren<QLabel *>())
             QVERIFY(!l->text().contains("LOCAL FIRST"));
-        QVERIFY(!findButton(window, QStringLiteral("打开数据文件夹")));
+        QVERIFY(!findButton(window, QStringLiteral("打开文件夹")));
         QPushButton *maximize = nullptr;
         for (auto b : window.findChildren<QPushButton *>("chromeButton"))
             if (b->accessibleName() == QStringLiteral("最大化"))
@@ -172,7 +174,7 @@ class UiTests : public QObject {
                 return;
             QCOMPARE(tabs->count(), 2);
             tabs->setCurrentIndex(1);
-            QVERIFY(findButton(*dialog, QStringLiteral("打开数据文件夹")));
+            QVERIFY(findButton(*dialog, QStringLiteral("打开文件夹")));
             inspected = true;
             dialog->reject();
         });
@@ -394,6 +396,94 @@ class UiTests : public QObject {
         QSettings moved(b + "/settings.ini", QSettings::IniFormat);
         QCOMPARE(moved.value("sort").toInt(), 2);
         QCOMPARE(QFileInfo(moved.fileName()).absolutePath(), QFileInfo(b).absoluteFilePath());
+    }
+    void choiceBoxMouseKeyboardAndWheel() {
+        ChoiceBox box;
+        box.addItems({"手动排序", "未完成优先", "优先级排序"});
+        box.resize(220, 36);
+        box.show();
+        QTest::qWait(20);
+        QSignalSpy activated(&box, &QComboBox::activated);
+        QTest::mouseClick(&box, Qt::LeftButton);
+        auto popup = box.findChild<QFrame *>("choicePopup");
+        auto list = box.findChild<QListView *>("choiceList");
+        QVERIFY(popup);
+        QVERIFY(list);
+        QVERIFY(popup->isVisible());
+        const auto popupImage = popup->grab().toImage();
+        QVERIFY(popupImage.pixelColor(4, popupImage.height() / 2).alpha() > 240);
+        QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier,
+                          list->visualRect(list->model()->index(2, 0)).center());
+        QCOMPARE(box.currentIndex(), 2);
+        QCOMPARE(activated.count(), 1);
+        QVERIFY(!popup->isVisible());
+        box.showPopup();
+        QTest::keyClick(list, Qt::Key_Up);
+        QTest::keyClick(list, Qt::Key_Escape);
+        QCOMPARE(box.currentIndex(), 2);
+        QTest::keyClick(&box, Qt::Key_Down);
+        QVERIFY(popup->isVisible());
+        QTest::keyClick(list, Qt::Key_Up);
+        QTest::keyClick(list, Qt::Key_Return);
+        QCOMPARE(box.currentIndex(), 1);
+        QCOMPARE(activated.count(), 2);
+        QWheelEvent wheel(QPointF(12, 12), box.mapToGlobal(QPoint(12, 12)), QPoint(),
+                          QPoint(0, 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(&box, &wheel);
+        QCOMPARE(box.currentIndex(), 1);
+        QVERIFY(box.screen()->availableGeometry().contains(popup->geometry()));
+    }
+    void settingsDataLocationMigration() {
+        QTemporaryDir dir(QDir::currentPath() + "/ui-relocate-XXXXXX");
+        const auto source = dir.filePath("data"), destination = dir.filePath("chosen");
+        QVERIFY(QDir().mkpath(source));
+        QVERIFY(QDir().mkpath(destination));
+        Planner plan(source + "/tasks.json");
+        plan.add(QDate::currentDate(), "keep during move", 1);
+        QVERIFY(plan.save());
+        StorageManager manager(dir.path());
+        MainWindow window(source + "/tasks.json", nullptr, &manager);
+        window.show();
+        QSignalSpy restart(&window, &MainWindow::restartRequested);
+        const bool previous = qApp->testAttribute(Qt::AA_DontUseNativeDialogs);
+        qApp->setAttribute(Qt::AA_DontUseNativeDialogs);
+        auto restore =
+            qScopeGuard([&] { qApp->setAttribute(Qt::AA_DontUseNativeDialogs, previous); });
+        QTimer::singleShot(30, &window, [&] {
+            auto dialog = window.findChild<QDialog *>();
+            if (!dialog)
+                return;
+            auto tabs = dialog->findChild<QTabWidget *>();
+            tabs->setCurrentIndex(1);
+            auto choose = dialog->findChild<QPushButton *>("chooseStorage");
+            QVERIFY(choose);
+            QVERIFY(choose->isEnabled());
+            QTimer::singleShot(30, &window, [&] {
+                auto picker = window.findChild<QFileDialog *>();
+                if (picker) {
+                    picker->setDirectory(destination);
+                    picker->selectFile(destination);
+                    QMetaObject::invokeMethod(picker, "accept", Qt::DirectConnection);
+                }
+            });
+            choose->click();
+            QCOMPARE(dialog->findChild<QLabel *>("storageLocation")->text(),
+                     QDir::toNativeSeparators(destination));
+            dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Save)->click();
+            QTimer::singleShot(30, &window, [&] {
+                auto question = window.findChild<QMessageBox *>();
+                if (question)
+                    question->button(QMessageBox::Yes)->click();
+            });
+        });
+        window.findChild<QPushButton *>("weatherAction")->click();
+        QCOMPARE(restart.count(), 1);
+        QCOMPARE(manager.directory(), QFileInfo(destination).canonicalFilePath());
+        Planner copied(destination + "/tasks.json");
+        QVERIFY(copied.load());
+        QCOMPARE(copied.tasks[0].title, QString("keep during move"));
+        QVERIFY(QFile::exists(source + "/tasks.json"));
+        QVERIFY(QFile::exists(destination + "/settings.ini"));
     }
 };
 QTEST_MAIN(UiTests)

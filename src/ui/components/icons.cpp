@@ -42,16 +42,6 @@ class VectorIcon final : public QIconEngine {
             p->drawArc(QRectF(5, 5, 14, 14), 35 * 16, 290 * 16);
             p->drawLine(19, 4, 19, 10);
             p->drawLine(19, 10, 13, 10);
-        } else if (kind == "app") {
-            p->setPen(Qt::NoPen);
-            p->setBrush(QColor("#608870"));
-            p->drawRoundedRect(QRectF(0.75, 0.75, 22.5, 22.5), 6, 6);
-            p->setPen(QPen(Qt::white, 1.5, Qt::SolidLine, Qt::RoundCap));
-            p->drawLine(7, 8, 17, 8);
-            p->drawLine(7, 12, 13, 12);
-            p->drawLine(7, 16, 10, 16);
-            p->drawLine(13, 16, 15, 18);
-            p->drawLine(15, 18, 19, 13);
         } else {
             p->drawLine(5, 7, 19, 7);
             p->drawLine(5, 17, 19, 17);
@@ -80,7 +70,7 @@ class VectorIcon final : public QIconEngine {
 };
 } // namespace
 QIcon appIcon() {
-    return QIcon(new VectorIcon("app", QColor("#608870")));
+    return QIcon(":/app.svg");
 }
 QIcon lineIcon(const QString &kind, const QColor &color) {
     return QIcon(new VectorIcon(kind, color));

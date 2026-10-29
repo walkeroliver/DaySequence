@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
 #include "mainwindow.h"
+#include "storage.h"
 #include <QApplication>
 #include <QCryptographicHash>
 #include <QDir>
@@ -9,6 +10,7 @@
 #include <QLocalSocket>
 #include <QLockFile>
 #include <QMessageBox>
+#include <QProcess>
 #include <QTemporaryDir>
 #include <memory>
 
@@ -17,7 +19,7 @@ int main(int argc, char *argv[]) {
     QApplication::setStyle("Fusion");
     QCoreApplication::setApplicationName("DaySequence");
     QCoreApplication::setOrganizationName("DaySequence");
-    QCoreApplication::setApplicationVersion("2.1.2");
+    QCoreApplication::setApplicationVersion(DAYSEQUENCE_VERSION);
     if (QGuiApplication::platformName() == "offscreen") {
         const auto fonts = qEnvironmentVariable("WINDIR", "C:/Windows") + "/Fonts/";
         QFontDatabase::addApplicationFont(fonts + "msyh.ttc");
@@ -29,6 +31,7 @@ int main(int argc, char *argv[]) {
     const bool preview = args.contains("--preview");
     std::unique_ptr<QTemporaryDir> temporary;
     QString directory;
+    StorageManager storage(QCoreApplication::applicationDirPath());
     if (preview) {
         temporary = std::make_unique<QTemporaryDir>(QDir::currentPath() + "/.preview-XXXXXX");
         if (!temporary->isValid()) {
@@ -36,8 +39,14 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         directory = temporary->path();
-    } else
-        directory = QDir(QCoreApplication::applicationDirPath()).filePath("data");
+    } else {
+        QString error;
+        directory = storage.directory(&error);
+        if (!error.isEmpty()) {
+            QMessageBox::warning(nullptr, "无法读取保存位置", error);
+            return 1;
+        }
+    }
     if (directory.isEmpty() || !QDir().mkpath(directory)) {
         QMessageBox::warning(nullptr, "无法启动日序", "无法创建数据文件夹：\n" + directory);
         return 1;
@@ -69,7 +78,9 @@ int main(int argc, char *argv[]) {
         QMessageBox::warning(nullptr, "无法启动日序", server.errorString());
         return 1;
     }
-    MainWindow window(directory + "/tasks.json");
+    MainWindow window(directory + "/tasks.json", nullptr, preview ? nullptr : &storage);
+    QObject::connect(&window, &MainWindow::restartRequested, &app,
+                     [&] { app.exit(StorageManager::RestartExitCode); });
     QObject::connect(&server, &QLocalServer::newConnection, &window, [&] {
         while (server.hasPendingConnections())
             server.nextPendingConnection()->deleteLater();
@@ -81,5 +92,16 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     window.show();
-    return app.exec();
+    const auto result = app.exec();
+    if (result == StorageManager::RestartExitCode) {
+        server.close();
+        QLocalServer::removeServer(serverName);
+        lock.unlock();
+        if (!QProcess::startDetached(QCoreApplication::applicationFilePath(), {})) {
+            QMessageBox::warning(nullptr, "需要重新打开", "保存位置已更新，请手动重新打开日序。");
+            return 1;
+        }
+        return 0;
+    }
+    return result;
 }

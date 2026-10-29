@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
+#include "choicebox.h"
 #include "icons.h"
 #include "mainwindow.h"
+#include "storage.h"
 #include "uicomponents.h"
 #include <QtWidgets>
 void MainWindow::preferences() {
+    const auto currentDirectory = QFileInfo(model.filePath()).absolutePath();
+    QString pendingDirectory = currentDirectory;
     QDialog dialog(this);
     dialog.setWindowTitle("设置与偏好");
     dialog.setFixedWidth(520);
@@ -17,7 +21,7 @@ void MainWindow::preferences() {
     auto appearance = new QWidget;
     auto al = column(appearance, 12);
     al->setSpacing(14);
-    auto themeBox = new QComboBox;
+    auto themeBox = new ChoiceBox;
     themeBox->setObjectName("themeSelector");
     themeBox->setIconSize(QSize(64, 16));
     for (const auto &preset : Theme::presets()) {
@@ -59,22 +63,45 @@ void MainWindow::preferences() {
     auto dataPage = new QWidget;
     auto data = column(dataPage, 12);
     data->setSpacing(16);
-    data->addWidget(label("任务与偏好，随程序一起保存。", "sectionTitle"));
+    data->addWidget(label("让记录保存在你选择的位置。", "sectionTitle"));
     auto block = new QFrame;
     block->setObjectName("settingsBlock");
     auto bl = column(block, 18);
-    bl->addWidget(label("便携数据位置（计划和界面偏好）", "eyebrow"));
-    auto path = new QLineEdit(QFileInfo(model.filePath()).absolutePath());
-    path->setReadOnly(true);
-    path->setCursorPosition(0);
+    bl->addWidget(label("保存文件夹", "eyebrow"));
+    auto path = label(QDir::toNativeSeparators(currentDirectory), "storageLocation");
+    path->setWordWrap(true);
+    path->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    path->setToolTip(path->text());
     bl->addWidget(path);
-    auto open = button("打开数据文件夹", "secondary");
-    bl->addWidget(open);
-    connect(open, &QPushButton::clicked, this, [this] {
-        QDir().mkpath(QFileInfo(model.filePath()).absolutePath());
-        if (!QDesktopServices::openUrl(
-                QUrl::fromLocalFile(QFileInfo(model.filePath()).absolutePath())))
-            QMessageBox::warning(this, "无法打开", "请复制上方路径，在资源管理器中打开。");
+    auto directoryButtons = new QHBoxLayout;
+    auto choose = button("更改位置…", "secondary");
+    choose->setObjectName("chooseStorage");
+    choose->setEnabled(storageManager && healthy);
+    auto open = button("打开文件夹", "secondary");
+    auto copy = button("复制路径", "secondary");
+    directoryButtons->addWidget(choose);
+    directoryButtons->addWidget(open);
+    directoryButtons->addWidget(copy);
+    bl->addLayout(directoryButtons);
+    auto locationNote =
+        label("修改保存位置后，会复制当前任务和偏好并重启生效。原文件保留。", "smallMuted");
+    locationNote->setWordWrap(true);
+    bl->addWidget(locationNote);
+    connect(choose, &QPushButton::clicked, &dialog, [&] {
+        const auto selected = QFileDialog::getExistingDirectory(
+            &dialog, "选择新的保存文件夹", pendingDirectory, QFileDialog::ShowDirsOnly);
+        if (selected.isEmpty())
+            return;
+        pendingDirectory = QDir::cleanPath(selected);
+        path->setText(QDir::toNativeSeparators(pendingDirectory));
+        path->setToolTip(path->text());
+    });
+    connect(copy, &QPushButton::clicked, &dialog, [&] {
+        QApplication::clipboard()->setText(QDir::toNativeSeparators(pendingDirectory));
+    });
+    connect(open, &QPushButton::clicked, &dialog, [&] {
+        if (!QDesktopServices::openUrl(QUrl::fromLocalFile(pendingDirectory)))
+            QMessageBox::warning(&dialog, "无法打开", "请复制路径，在资源管理器中打开。");
     });
     data->addWidget(block);
     auto backup = button("备份全部计划…", "secondary");
@@ -130,6 +157,40 @@ void MainWindow::preferences() {
             weatherText = themeBox->currentText().section(' ', 0, 0);
             weatherDetail = "手动配色 · 随心选择";
         }
+        settings.sync();
+        if (settings.status() != QSettings::NoError) {
+            QMessageBox::warning(this, "设置未能保存", "保存文件夹不可写入，请检查权限后重试。");
+            return;
+        }
         applyTheme();
+        if (pendingDirectory.compare(currentDirectory, Qt::CaseInsensitive) != 0) {
+            if (!storageManager || !healthy)
+                return;
+            const auto answer = QMessageBox::question(
+                this, "更改保存位置", "将任务和偏好复制到所选文件夹，并重新打开日序。继续吗？",
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (answer != QMessageBox::Yes)
+                return;
+            if (!model.save()) {
+                QMessageBox::warning(this, "无法迁移数据", model.error);
+                return;
+            }
+            settings.setValue("windowGeometry", saveGeometry());
+            settings.sync();
+            if (settings.status() != QSettings::NoError) {
+                QMessageBox::warning(this, "无法迁移数据", "当前偏好未能保存，请检查文件夹权限。");
+                return;
+            }
+            QString error;
+            if (!storageManager->relocate(currentDirectory, pendingDirectory, &error)) {
+                QMessageBox::warning(this, "保存位置未更改", error);
+                return;
+            }
+            cancelWeatherRequest();
+            quitting = true;
+            tray->hide();
+            hide();
+            emit restartRequested();
+        }
     }
 }
