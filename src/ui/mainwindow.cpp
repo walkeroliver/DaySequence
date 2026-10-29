@@ -86,8 +86,8 @@ void MainWindow::build() {
     maximizeButton->setAccessibleName("最大化");
     auto closeButton = button("", "closeButton");
     closeButton->setIcon(lineIcon("close"));
-    closeButton->setToolTip("关闭窗口，留在后台");
-    closeButton->setAccessibleName("关闭窗口");
+    closeButton->setToolTip("退出日序");
+    closeButton->setAccessibleName("退出日序");
     for (auto b : {minimize, maximizeButton, closeButton}) {
         b->setFixedSize(36, 32);
         b->setIconSize(QSize(24, 24));
@@ -138,10 +138,7 @@ void MainWindow::build() {
     side->addWidget(quit, 0, Qt::AlignLeft);
     connect(dailyNav, &QPushButton::clicked, this, [this] { selectPage(0); });
     connect(reviewNav, &QPushButton::clicked, this, [this] { selectPage(1); });
-    connect(quit, &QPushButton::clicked, this, [this] {
-        quitting = true;
-        close();
-    });
+    connect(quit, &QPushButton::clicked, this, &MainWindow::requestExit);
     shell->addWidget(sidebar);
     auto content = new QWidget;
     auto body = column(content, 24);
@@ -637,10 +634,7 @@ void MainWindow::setupTray() {
     tray->setToolTip("日序 · 计划每一天");
     auto menu = new QMenu(this);
     menu->addAction("打开日序", this, [this] { restoreWindow(); });
-    menu->addAction("退出日序", this, [this] {
-        quitting = true;
-        close();
-    });
+    menu->addAction("退出日序", this, &MainWindow::requestExit);
     tray->setContextMenu(menu);
     connect(tray, &QSystemTrayIcon::activated, this, [this](auto reason) {
         if (reason == QSystemTrayIcon::DoubleClick || reason == QSystemTrayIcon::Trigger) {
@@ -656,20 +650,20 @@ void MainWindow::setupTray() {
         weatherDetail = settings.value("weatherDetail", "正在等待天气更新").toString();
     }
 }
-void MainWindow::closeEvent(QCloseEvent *event) {
+void MainWindow::requestExit() {
+    if (quitting)
+        return;
+    quitting = true;
     settings.setValue("windowGeometry", saveGeometry());
-    if (!quitting && tray->isVisible()) {
-        hide();
-        event->ignore();
-        if (!settings.value("trayHint", false).toBool()) {
-            tray->showMessage("日序已留在后台", "点击系统托盘图标打开；右键可完全退出。",
-                              QSystemTrayIcon::Information, 2500);
-            settings.setValue("trayHint", true);
-        }
-    } else {
-        tray->hide();
-        event->accept();
-    }
+    settings.sync();
+    cancelWeatherRequest();
+    tray->hide();
+    hide();
+    emit exitRequested();
+}
+void MainWindow::closeEvent(QCloseEvent *event) {
+    requestExit();
+    event->accept();
 }
 void MainWindow::changeEvent(QEvent *event) {
     QMainWindow::changeEvent(event);
@@ -678,8 +672,6 @@ void MainWindow::changeEvent(QEvent *event) {
             maximizeButton->setIcon(lineIcon(isMaximized() ? "restore" : "max", theme.muted));
             maximizeButton->setToolTip(isMaximized() ? "还原窗口" : "最大化");
         }
-        if (isMinimized() && tray && tray->isVisible())
-            QTimer::singleShot(0, this, &QWidget::hide);
     }
 }
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {

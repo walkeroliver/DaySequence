@@ -24,13 +24,13 @@
 
 ## 下载与运行
 
-1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 DaySequence-2.2.1-windows-x64.zip。
+1. 在 [Releases](https://github.com/walkeroliver/DaySequence/releases) 下载 DaySequence-2.2.2-windows-x64.zip。
 2. 完整解压 ZIP，双击文件夹中的 DaySequence.exe。
 3. 保留随附的 DLL 和 plugins 文件夹；不需要另行安装 Qt。
 
 目标平台为 Windows x64。本次发布在 Windows 11 验证，其他 Windows 版本尚未单独验证。程序尚未进行代码签名。
 
-右上角图标打开外观、天气、数据与备份设置。关闭窗口会留在系统托盘；左下角电源按钮或托盘菜单完全退出。
+右上角图标打开外观、天气、数据与备份设置。右上角关闭、左下角电源按钮和托盘「退出日序」都会完全结束程序。需要后台运行时请最小化，窗口会保留在任务栏，避免隐藏后找不到入口。
 
 ## 数据与隐私
 

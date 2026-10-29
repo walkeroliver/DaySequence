@@ -79,6 +79,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     MainWindow window(directory + "/tasks.json", nullptr, preview ? nullptr : &storage);
+    QObject::connect(&window, &MainWindow::exitRequested, &app, &QCoreApplication::quit,
+                     Qt::QueuedConnection);
     QObject::connect(&window, &MainWindow::restartRequested, &app,
                      [&] { app.exit(StorageManager::RestartExitCode); });
     QObject::connect(&server, &QLocalServer::newConnection, &window, [&] {

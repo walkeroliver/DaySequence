@@ -33,6 +33,7 @@ class MainWindow : public QMainWindow {
 
   signals:
     void restartRequested();
+    void exitRequested();
 
   protected:
     void closeEvent(QCloseEvent *event) override;
@@ -93,5 +94,6 @@ class MainWindow : public QMainWindow {
     void weatherFailed(const QString &reason, bool cityNotFound = false);
     void fetchForecast(double latitude, double longitude, const QString &city, int requestId);
     void setupTray();
+    void requestExit();
     void addTask();
 };
