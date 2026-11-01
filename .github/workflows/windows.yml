@@ -19,6 +19,7 @@ jobs:
         with:
           version: '6.8.3'
           arch: win64_mingw
+          modules: qtmultimedia
           tools: tools_mingw1310
           cache: true
       - name: Build, test and package

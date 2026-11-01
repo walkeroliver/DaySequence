@@ -427,9 +427,7 @@ void MainWindow::build() {
     pages->addWidget(scrollPage(review));
     focusClock = new FocusClock(settings);
     pages->addWidget(scrollPage(focusClock));
-    connect(focusClock, &FocusClock::completed, this, [this](bool sound) {
-        if (sound)
-            QApplication::beep();
+    connect(focusClock, &FocusClock::completed, this, [this](bool) {
         if (tray && tray->isVisible())
             tray->showMessage("专注完成", "这一段专注已完成，起身活动一下吧。",
                               QSystemTrayIcon::Information, 5000);
@@ -660,6 +658,9 @@ void MainWindow::setupTray() {
     tray->setToolTip("日序 · 计划每一天");
     auto menu = new QMenu(this);
     menu->addAction("打开日序", this, [this] { restoreWindow(); });
+    auto stopAlarm = menu->addAction("停止响铃", focusClock, &FocusClock::stopAlarm);
+    stopAlarm->setEnabled(focusClock->ringing());
+    connect(focusClock, &FocusClock::alarmActiveChanged, stopAlarm, &QAction::setEnabled);
     menu->addAction("退出日序", this, &MainWindow::requestExit);
     tray->setContextMenu(menu);
     connect(tray, &QSystemTrayIcon::messageClicked, this, [this] {
@@ -684,6 +685,7 @@ void MainWindow::requestExit() {
     if (quitting)
         return;
     quitting = true;
+    focusClock->stopAlarm();
     settings.setValue("windowGeometry", saveGeometry());
     settings.sync();
     cancelWeatherRequest();

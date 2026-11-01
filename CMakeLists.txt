@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.19)
-project(DaySequence VERSION 2.3.2 LANGUAGES CXX)
+project(DaySequence VERSION 2.4.0 LANGUAGES CXX)
 set(CMAKE_INSTALL_BINDIR ".")
 set(CMAKE_INSTALL_LIBDIR ".")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Widgets Network)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Widgets Network Multimedia)
 qt_standard_project_setup()
 
 qt_add_library(daysequence_data STATIC
@@ -17,6 +17,8 @@ qt_add_library(daysequence_data STATIC
 target_include_directories(daysequence_data PUBLIC src/core src/services)
 target_link_libraries(daysequence_data PUBLIC Qt6::Core)
 qt_add_library(daysequence_ui STATIC
+    src/services/focusalarm.cpp src/services/focusalarm.h
+    src/services/musiclibrary.cpp src/services/musiclibrary.h
     src/ui/mainwindow.cpp src/ui/mainwindow.h src/ui/appearance.cpp src/ui/preferences.cpp src/ui/weather.cpp
     src/ui/widgets/visuals.cpp src/ui/widgets/visuals.h
     src/ui/widgets/focusclock.cpp src/ui/widgets/focusclock.h
@@ -25,8 +27,8 @@ qt_add_library(daysequence_ui STATIC
     src/ui/components/icons.cpp src/ui/components/icons.h src/ui/components/uicomponents.h src/ui/components/centertip.h
 )
 target_include_directories(daysequence_ui PUBLIC src/ui src/ui/widgets src/ui/components)
-qt_add_resources(daysequence_ui icons PREFIX "/" BASE resources FILES resources/check.svg resources/app.svg)
-target_link_libraries(daysequence_ui PUBLIC daysequence_data Qt6::Widgets Qt6::Network)
+qt_add_resources(daysequence_ui icons PREFIX "/" BASE resources FILES resources/check.svg resources/app.svg resources/sounds/chime.wav resources/sounds/soft.wav resources/sounds/bell.wav)
+target_link_libraries(daysequence_ui PUBLIC daysequence_data Qt6::Widgets Qt6::Network Qt6::Multimedia)
 qt_add_executable(DaySequence WIN32 src/app/main.cpp)
 target_compile_definitions(DaySequence PRIVATE DAYSEQUENCE_VERSION="${PROJECT_VERSION}")
 target_link_libraries(DaySequence PRIVATE daysequence_ui)
@@ -64,3 +66,5 @@ qt_generate_deploy_app_script(TARGET DaySequence OUTPUT_SCRIPT deploy_script NO_
 install(SCRIPT ${deploy_script})
 install(FILES LICENSE NOTICE THIRD_PARTY_NOTICES.md RELEASE_NOTES.md DESTINATION .)
 install(DIRECTORY licenses/ DESTINATION licenses)
+
+install(FILES resources/sounds/chime.wav resources/sounds/soft.wav resources/sounds/bell.wav DESTINATION data/music)

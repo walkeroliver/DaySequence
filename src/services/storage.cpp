@@ -8,7 +8,9 @@
 #include <QJsonObject>
 #include <QLockFile>
 #include <QMap>
+#include <QRegularExpression>
 #include <QSaveFile>
+#include <QSettings>
 #include <QTemporaryFile>
 
 namespace {
@@ -68,7 +70,38 @@ bool StorageManager::relocate(const QString &sourceDirectory, const QString &des
                target = absoluteDirectory(destinationDirectory);
     if (source.compare(target, Qt::CaseInsensitive) == 0)
         return true;
-    const QStringList names = {"tasks.json", "settings.ini"};
+    QStringList names = {"tasks.json", "settings.ini"};
+    QSettings preferences(QDir(source).filePath("settings.ini"), QSettings::IniFormat);
+    const auto audio = preferences.value("focusAudioFile").toString();
+    if (QRegularExpression("^sounds/[a-f0-9-]{36}\\.(wav|mp3|flac|m4a|ogg)$")
+            .match(audio)
+            .hasMatch() &&
+        QFile::exists(QDir(source).filePath(audio)))
+        names.append(audio);
+    QDir music(QDir(source).filePath("music"));
+    if (QFileInfo(music.absolutePath()).isSymLink()) {
+        if (error)
+            *error = "music 文件夹不能是目录链接。";
+        return false;
+    }
+    qint64 musicBytes = 0;
+    const auto tracks = music.entryInfoList(QDir::Files | QDir::NoSymLinks, QDir::Name);
+    if (tracks.size() > 2000) {
+        if (error)
+            *error = "音乐文件过多，请先整理后再迁移。";
+        return false;
+    }
+    for (const auto &track : tracks) {
+        if (!QStringList{"wav", "mp3", "flac", "m4a", "ogg"}.contains(track.suffix().toLower()))
+            continue;
+        musicBytes += track.size();
+        if (track.size() > 100LL * 1024 * 1024 || musicBytes > 512LL * 1024 * 1024) {
+            if (error)
+                *error = "音乐库超过迁移大小限制，请先整理或单独备份。";
+            return false;
+        }
+        names.append("music/" + track.fileName());
+    }
     QMap<QString, QByteArray> contents;
     for (const auto &name : names) {
         QFile sourceFile(QDir(source).filePath(name));
@@ -123,7 +156,7 @@ bool StorageManager::relocate(const QString &sourceDirectory, const QString &des
     };
     for (auto it = contents.cbegin(); it != contents.cend(); ++it) {
         const auto path = QDir(target).filePath(it.key());
-        if (!writeFile(path, it.value(), error)) {
+        if (!QDir().mkpath(QFileInfo(path).absolutePath()) || !writeFile(path, it.value(), error)) {
             rollback();
             return false;
         }

@@ -24,8 +24,30 @@ if (!$build.StartsWith($project + '\', [StringComparison]::OrdinalIgnoreCase)) {
 $output = Join-Path $project 'artifacts'
 $stage = [IO.Path]::GetFullPath((Join-Path $build 'portable/DaySequence'))
 if (!$stage.StartsWith($build + '\', [StringComparison]::OrdinalIgnoreCase)) { throw '打包目录必须位于构建目录内' }
+function Assert-CleanReleaseData([string]$Directory) {
+    if (Test-Path -LiteralPath (Join-Path $Directory 'storage.json')) { throw '发布目录含个人保存位置配置，停止打包。' }
+    $data = Join-Path $Directory 'data'
+    if (!(Test-Path -LiteralPath $data)) { return }
+    $expected = @('music/chime.wav', 'music/soft.wav', 'music/bell.wav')
+    $entries = @(Get-ChildItem -LiteralPath $data -Recurse -Force)
+    foreach ($entry in @((Get-Item -LiteralPath $data -Force)) + $entries) {
+        if (($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw '发布数据目录不能包含链接。' }
+    }
+    foreach ($entry in $entries) {
+        $relative = $entry.FullName.Substring($data.Length + 1).Replace('\', '/')
+        if ($entry.PSIsContainer) {
+            if ($relative -ne 'music') { throw '发布目录含额外数据文件夹，停止打包。' }
+        } else {
+            if ($relative -notin $expected) { throw '发布目录含用户数据或自选音乐，停止打包。' }
+            $original = Join-Path $project ('resources/sounds/' + $entry.Name)
+            if ((Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash) {
+                throw '预设音乐已被替换，停止打包，避免带入个人音频。'
+            }
+        }
+    }
+}
 if (Test-Path -LiteralPath $stage) {
-    if ((Test-Path -LiteralPath (Join-Path $stage 'data')) -or (Test-Path -LiteralPath (Join-Path $stage 'storage.json'))) { throw '暂存目录含个人数据或保存位置设置，请使用其他构建目录打包' }
+    Assert-CleanReleaseData $stage
     if (((Get-Item -LiteralPath $stage -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw '打包目录不能是目录链接' }
     Remove-Item -LiteralPath $stage -Recurse -Force
 }
@@ -41,7 +63,7 @@ if ($LASTEXITCODE -ne 0) { throw '测试未通过，停止打包' }
 if ($LASTEXITCODE -ne 0) { throw '运行库部署失败' }
 $exe = Join-Path $stage 'DaySequence.exe'
 if ((Get-Item -LiteralPath $exe).VersionInfo.FileVersion -ne $version) { throw 'EXE 版本信息与项目版本不一致' }
-if ((Test-Path -LiteralPath (Join-Path $stage 'data')) -or (Test-Path -LiteralPath (Join-Path $stage 'storage.json'))) { throw '发布目录出现个人数据，停止打包' }
+Assert-CleanReleaseData $stage
 $binary = Join-Path $output "DaySequence-$version-windows-x64.zip"
 Compress-Archive -LiteralPath $stage -DestinationPath $binary -Force -CompressionLevel Optimal
 $assets = @($binary)

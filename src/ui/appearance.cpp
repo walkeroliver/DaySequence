@@ -49,6 +49,13 @@ void MainWindow::applyTheme() {
         QPushButton { background:%7; border:0; border-radius:8px; padding:9px 13px; }
         QPushButton:hover { background:%5; } QPushButton:pressed { color:%6; }
         QPushButton:disabled { color:%4; }
+        #clockControls { background:%7; border-radius:14px; }
+        #focusAlarmBanner { background:%7; border:1px solid %6; border-radius:12px; }
+        #clockStopAlarm { background:%6; color:%3; font-weight:600; padding:10px 20px; }
+        #clockAudioMessage { color:%6; font-size:12px; }
+        QSlider::groove:horizontal { height:4px; background:%5; border-radius:2px; }
+        QSlider::sub-page:horizontal { background:%6; border-radius:2px; }
+        QSlider::handle:horizontal { width:12px; background:%6; margin:-4px 0; border-radius:6px; }
         #clockFinishTime { color:%4; font-size:11px; }
         #centerTip { background:%1; color:%3; border:1px solid %5; border-radius:12px; font-size:13px; }
         #clockStatus { color:%6; background:%7; padding:7px 12px; border-radius:9px; font-size:11px; }

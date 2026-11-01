@@ -38,3 +38,9 @@ MainWindow 的各退出入口统一调用 requestExit，保存偏好、取消网
 ## 专注时钟
 
 Countdown 位于 src/core，通过 QElapsedTimer 计算实际经过的时间，QTimer 只负责刷新，不累减固定秒数。状态为准备、运行、暂停、完成；完成信号每轮只发出一次。FocusClock 位于 src/ui/widgets，负责时长输入、预设、环形绘制和交互，界面切页不会销毁计时器。主窗口接收完成信号并负责系统提示音和托盘提醒。仅时长与提示音偏好写入 settings.ini，运行中的计时会话不跨程序重启保留。
+
+## 2.4 完成铃声
+
+FocusAlarm（src/services）使用 QMediaPlayer / QAudioOutput，提供单次、循环、试听上限、停止及错误回退。FocusClock 选择资源 URL 或经过校验的数据目录内音频路径，并保存铃声、循环和音量偏好；Countdown 继续只负责单调计时，不依赖音频设备。MainWindow 只显示托盘完成提醒，托盘停止入口委托给 FocusClock，不再调用 QApplication::beep。
+
+用户音频保留文件名，通过 QSaveFile 写入 music/，设置更新失败保留原选择；StorageManager 复制 music/ 中的全部受支持音频，并保留源文件。内置音频编入 Qt 资源，发布不依赖开发机绝对路径。

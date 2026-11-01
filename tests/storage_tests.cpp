@@ -55,6 +55,25 @@ class StorageTests : public QObject {
         StorageManager reopened(d.path());
         QCOMPARE(reopened.directory(), QFileInfo(next).canonicalFilePath());
     }
+    void movesImportedFocusSound() {
+        QTemporaryDir d;
+        StorageManager manager(d.path());
+        const auto old = d.filePath("data"), next = d.filePath("next");
+        const auto name = QString("music/favorite.wav");
+        QVERIFY(QDir().mkpath(old + "/music"));
+        write(old + "/" + name, "test-audio");
+        write(old + "/music/second.mp3", "second-audio");
+        {
+            QSettings s(old + "/settings.ini", QSettings::IniFormat);
+            s.setValue("focusAudioFile", name);
+            s.sync();
+        }
+        QString error;
+        QVERIFY2(manager.relocate(old, next, &error), qPrintable(error));
+        QCOMPARE(read(next + "/" + name), QByteArray("test-audio"));
+        QCOMPARE(read(next + "/music/second.mp3"), QByteArray("second-audio"));
+        QCOMPARE(read(old + "/" + name), QByteArray("test-audio"));
+    }
     void neverOverwritesOtherData() {
         QTemporaryDir d(QDir::currentPath() + "/storage-conflict-XXXXXX");
         StorageManager manager(d.path());

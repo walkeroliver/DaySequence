@@ -4,7 +4,7 @@ DaySequence source is licensed under GPL-3.0-only. The Windows binary package dy
 
 ## Qt 6.8.3
 
-Modules: Qt Core, Gui, Widgets, Network and Svg, plus the corresponding Windows, image-format, icon, network and TLS plugins.
+Modules: Qt Core, Gui, Widgets, Network, Svg and Multimedia, plus the corresponding Windows, image-format, icon, network and TLS plugins.
 Copyright The Qt Company Ltd. and other Qt contributors. Qt is available under LGPL-3.0 / GPL-3.0 and commercial terms; the open-source libraries in this package retain their upstream licenses.
 
 - GPL version 3: `LICENSE`.
@@ -28,3 +28,9 @@ Sources: https://gcc.gnu.org/releases.html and https://www.mingw-w64.org/.
 
 Weather is queried from Open-Meteo only when enabled by the user. No weather dataset is bundled in the application.
 Source and attribution: https://open-meteo.com/ and https://open-meteo.com/en/terms.
+
+## Multimedia backend and sound assets (2.4)
+
+Qt Multimedia 6.8.3 uses the unmodified FFmpeg 7.1 shared libraries distributed by Qt. Its upstream attribution and LGPL-2.1 text are in licenses/ffmpeg/, and the Qt Multimedia bill of materials is licenses/qtmultimedia-6.8.3.spdx.json. The original source and build instructions are available at https://github.com/FFmpeg/FFmpeg/tree/n7.1 and https://code.qt.io/cgit/qt/qt5.git/tree/coin/provisioning?h=v6.8.3 ; Qt Multimedia source: https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qtmultimedia-everywhere-src-6.8.3.tar.xz . FFmpeg libraries remain dynamically linked and replaceable.
+
+The three WAV files in resources/sounds are original synthesized chimes created for DaySequence. They are distributed with the project under GPL-3.0-only; no third-party recordings are included. User-imported audio remains in the user's local data folder and is never included in source or release archives.

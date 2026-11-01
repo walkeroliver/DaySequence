@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
 #include "choicebox.h"
+#include "focusalarm.h"
 #include "focusclock.h"
 #include "icons.h"
 #include "mainwindow.h"
 #include "storage.h"
 #include "tasklist.h"
+#include <QAudioDevice>
+#include <QMediaDevices>
 #include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -125,6 +128,113 @@ class UiTests : public QObject {
         FocusClock reopened(preferences);
         QCOMPARE(reopened.countdown()->duration(), qint64(45 * 60 * 1000));
         QVERIFY(!reopened.findChild<QCheckBox *>("clockSound")->isChecked());
+    }
+    void focusAudioImportAndSettingsPersist() {
+        QTemporaryDir dir;
+        const auto source = dir.filePath("source.wav");
+        QFile builtin(":/sounds/chime.wav");
+        QVERIFY(builtin.open(QIODevice::ReadOnly));
+        {
+            QFile out(source);
+            QVERIFY(out.open(QIODevice::WriteOnly));
+            out.write(builtin.readAll());
+        }
+        QString imported;
+        {
+            QSettings prefs(dir.filePath("settings.ini"), QSettings::IniFormat);
+            FocusClock clock(prefs);
+            QString error;
+            QVERIFY2(clock.importAudio(source, &error), qPrintable(error));
+            imported = prefs.value("focusAudioFile").toString();
+            QVERIFY(QFile::exists(dir.filePath(imported)));
+            QVERIFY(QFile::remove(source));
+            QVERIFY(QFile::exists(dir.filePath(imported)));
+            clock.findChild<QCheckBox *>("clockLoopSound")->setChecked(true);
+            clock.findChild<QSlider *>("clockVolume")->setValue(35);
+            QVERIFY(!clock.importAudio(dir.filePath("absent.mp3"), &error));
+            QCOMPARE(prefs.value("focusAudioFile").toString(), imported);
+            prefs.sync();
+        }
+        QSettings prefs(dir.filePath("settings.ini"), QSettings::IniFormat);
+        FocusClock reopened(prefs);
+        QCOMPARE(reopened.findChild<QComboBox *>("clockAudioChoice")->currentData().toString(),
+                 imported);
+        QVERIFY(reopened.findChild<QCheckBox *>("clockLoopSound")->isChecked());
+        QCOMPARE(reopened.findChild<QSlider *>("clockVolume")->value(), 35);
+    }
+    void focusMusicLibraryKeepsMultipleTracksAndDiscoversFiles() {
+        QTemporaryDir dir;
+        QSettings prefs(dir.filePath("settings.ini"), QSettings::IniFormat);
+        FocusClock clock(prefs);
+        auto choices = clock.findChild<QComboBox *>("clockAudioChoice");
+        QCOMPARE(choices->count(), 3);
+        QVERIFY(QFile::exists(dir.filePath("music/chime.wav")));
+        auto write = [](const QString &path, const QByteArray &bytes) {
+            QFile file(path);
+            return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size();
+        };
+        QVERIFY(QDir().mkpath(dir.filePath("one")));
+        QVERIFY(QDir().mkpath(dir.filePath("two")));
+        QVERIFY(write(dir.filePath("one/favorite.wav"), "first track"));
+        QVERIFY(write(dir.filePath("two/favorite.wav"), "second track"));
+        QString error;
+        QVERIFY(clock.importAudio(dir.filePath("one/favorite.wav"), &error));
+        QVERIFY(clock.importAudio(dir.filePath("two/favorite.wav"), &error));
+        QVERIFY(QFile::exists(dir.filePath("music/favorite.wav")));
+        QVERIFY(QFile::exists(dir.filePath("music/favorite (2).wav")));
+        QCOMPARE(choices->count(), 5);
+        QVERIFY(clock.importAudio(dir.filePath("two/favorite.wav"), &error));
+        QCOMPARE(choices->count(), 5); // Identical re-import does not duplicate.
+        QVERIFY(write(dir.filePath("music/自己喜欢的音乐.MP3"), "manual track"));
+        clock.countdown()->start();
+        clock.reloadMusic();
+        QCOMPARE(clock.countdown()->state(), Countdown::State::Running);
+        QVERIFY(choices->findData("music/自己喜欢的音乐.MP3") >= 0);
+        QCOMPARE(choices->currentData().toString(), QString("music/favorite (2).wav"));
+        clock.countdown()->reset();
+    }
+    void focusAlarmLoopsAndStopsWithoutResettingTimer() {
+        if (QMediaDevices::defaultAudioOutput().isNull())
+            QSKIP("Audio output unavailable");
+        QTemporaryDir dir;
+        QSettings prefs(dir.filePath("settings.ini"), QSettings::IniFormat);
+        prefs.setValue("focusSeconds", 1);
+        prefs.setValue("focusLoopSound", true);
+        FocusClock clock(prefs);
+        clock.findChild<QAudioOutput *>()->setMuted(true);
+        auto start = clock.findChild<QPushButton *>("clockStart");
+        start->click();
+        QTRY_VERIFY_WITH_TIMEOUT(clock.ringing(), 2500);
+        auto player = clock.findChild<QMediaPlayer *>();
+        QCOMPARE(player->loops(), int(QMediaPlayer::Infinite));
+        QTRY_COMPARE_WITH_TIMEOUT(player->playbackState(), QMediaPlayer::PlayingState, 5000);
+        clock.hide();
+        QTest::qWait(3800);
+        QVERIFY(clock.ringing());
+        clock.stopAlarm();
+        QVERIFY(!clock.ringing());
+        QCOMPARE(clock.countdown()->state(), Countdown::State::Finished);
+        QCOMPARE(player->playbackState(), QMediaPlayer::StoppedState);
+        clock.findChild<QCheckBox *>("clockLoopSound")->setChecked(false);
+        start->click();
+        QTRY_VERIFY_WITH_TIMEOUT(clock.ringing(), 2500);
+        QCOMPARE(player->loops(), int(QMediaPlayer::Once));
+        QTRY_VERIFY_WITH_TIMEOUT(!clock.ringing(), 6500);
+    }
+    void focusMissingAudioFallsBackAndPreviewNeverLoops() {
+        if (QMediaDevices::defaultAudioOutput().isNull())
+            QSKIP("Audio output unavailable");
+        FocusAlarm alarm;
+        alarm.setVolume(0);
+        QSignalSpy errors(&alarm, &FocusAlarm::failed);
+        alarm.play(QUrl::fromLocalFile("Z:/daysequence-missing-sound.wav"), true, true);
+        auto player = alarm.findChild<QMediaPlayer *>();
+        QVERIFY(alarm.previewing());
+        QCOMPARE(player->loops(), int(QMediaPlayer::Once));
+        QCOMPARE(player->source(), FocusAlarm::preset("chime"));
+        QCOMPARE(errors.count(), 1);
+        alarm.stop();
+        QVERIFY(!alarm.active());
     }
     void dailyWorkflow() {
         QTemporaryDir dir(QDir::currentPath() + "/ui-test-XXXXXX");
