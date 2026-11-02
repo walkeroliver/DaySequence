@@ -131,8 +131,10 @@ void MainWindow::preferences() {
         else
             QMessageBox::information(this, "备份完成", "已保存全部日期的计划。");
     });
-    auto info = label("备份包含所有日期的目标与完成状态。\n月度表格可在「月度回顾」中单独导出。",
-                      "smallMuted");
+    auto info = label(
+        "此 JSON 备份仅含所有日期的目标与完成状态，不含每日总结。\n总结请另行复制数据目录中的 "
+        "document 文件夹（包括回收目录）备份。",
+        "smallMuted");
     info->setWordWrap(true);
     data->addWidget(info);
     data->addStretch();
@@ -173,9 +175,12 @@ void MainWindow::preferences() {
             if (!storageManager || !healthy)
                 return;
             const auto answer = QMessageBox::question(
-                this, "更改保存位置", "将任务和偏好复制到所选文件夹，并重新打开日序。继续吗？",
+                this, "更改保存位置",
+                "将任务、偏好、音乐和每日总结复制到所选文件夹，并重新打开日序。继续吗？",
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (answer != QMessageBox::Yes)
+                return;
+            if (!flushJournal())
                 return;
             if (!model.save()) {
                 QMessageBox::warning(this, "无法迁移数据", model.error);

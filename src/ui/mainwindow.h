@@ -24,6 +24,7 @@ class StorageManager;
 class TaskListModel;
 class TaskDelegate;
 class FocusClock;
+class JournalPage;
 class MainWindow : public QMainWindow {
     Q_OBJECT
   public:
@@ -75,7 +76,9 @@ class MainWindow : public QMainWindow {
     QLabel *pageTitle, *pageSubtitle, *weatherLabel, *monthLabel, *dayLabel, *dayCaption,
         *progressCaption, *monthCaption, *reviewMonth, *insight, *saveStatus;
     QVector<QLabel *> metricValues, metricNotes;
-    QPushButton *dailyNav, *reviewNav, *clockNav;
+    QPushButton *dailyNav, *reviewNav, *clockNav, *journalNav;
+    JournalPage *journalPage = nullptr;
+    bool flushJournal();
     FocusClock *focusClock;
     QSystemTrayIcon *tray = nullptr;
     void build();

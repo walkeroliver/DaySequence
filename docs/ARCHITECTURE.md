@@ -44,3 +44,8 @@ Countdown 位于 src/core，通过 QElapsedTimer 计算实际经过的时间，Q
 FocusAlarm（src/services）使用 QMediaPlayer / QAudioOutput，提供单次、循环、试听上限、停止及错误回退。FocusClock 选择资源 URL 或经过校验的数据目录内音频路径，并保存铃声、循环和音量偏好；Countdown 继续只负责单调计时，不依赖音频设备。MainWindow 只显示托盘完成提醒，托盘停止入口委托给 FocusClock，不再调用 QApplication::beep。
 
 用户音频保留文件名，通过 QSaveFile 写入 music/，设置更新失败保留原选择；StorageManager 复制 music/ 中的全部受支持音频，并保留源文件。内置音频编入 Qt 资源，发布不依赖开发机绝对路径。
+
+
+## 每日总结（2.5）
+
+JournalStore 负责日期文件命名、UTF-8 校验、原子写入、读取版本比较与回收目录，保持 Qt Core 层不依赖 UI。JournalPage 负责日期导航、Markdown 编辑/安全预览、延迟保存和历史搜索；不将总结混入 Planner 的 tasks.json。MainWindow 在页面切换、收起托盘、退出与迁移前调用 flush，保存失败保留页面并阻止丢失编辑的操作。StorageManager 复制 document 的完整内容与 .trash，执行同名冲突校验和失败回滚。发布脚本只允许三首固定音乐进入 data，因此总结不进入发布包。完整交互与文件约定见 design-v2.5.0.md。

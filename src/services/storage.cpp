@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
 #include "storage.h"
+#include "journalstore.h"
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -101,6 +103,55 @@ bool StorageManager::relocate(const QString &sourceDirectory, const QString &des
             return false;
         }
         names.append("music/" + track.fileName());
+    }
+    const QDir documents(QDir(source).filePath("document"));
+    if (QFileInfo(documents.absolutePath()).isSymLink() ||
+        (QFileInfo(documents.absolutePath()).exists() &&
+         !QFileInfo(documents.absolutePath()).isDir())) {
+        if (error)
+            *error = "document 必须是普通文件夹，不能是文件或目录链接。";
+        return false;
+    }
+    QDirIterator documentFiles(documents.absolutePath(),
+                               QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot,
+                               QDirIterator::Subdirectories);
+    qint64 documentBytes = 0;
+    int documentCount = 0;
+    while (documentFiles.hasNext()) {
+        documentFiles.next();
+        const auto info = documentFiles.fileInfo();
+        if (info.isSymLink()) {
+            if (error)
+                *error = "总结目录含链接，请先整理后再迁移。";
+            return false;
+        }
+        if (!info.isFile())
+            continue;
+        documentBytes += info.size();
+        if (++documentCount > 20000 || info.size() > JournalStore::MaximumBytes ||
+            documentBytes > 128LL * 1024 * 1024) {
+            if (error)
+                *error = "总结目录超过迁移限制，请先单独备份或整理。";
+            return false;
+        }
+        names.append("document/" + documents.relativeFilePath(info.absoluteFilePath()));
+    }
+    // Refuse destination links before comparing or writing any file.
+    for (const auto &name : names) {
+        QString ancestor = QDir(target).filePath(name);
+        while (ancestor.size() >= target.size()) {
+            if (QFileInfo(ancestor).isSymLink()) {
+                if (error)
+                    *error = "目标位置含链接，已停止迁移。";
+                return false;
+            }
+            if (ancestor == target)
+                break;
+            const auto parent = QFileInfo(ancestor).absolutePath();
+            if (parent == ancestor)
+                break;
+            ancestor = parent;
+        }
     }
     QMap<QString, QByteArray> contents;
     for (const auto &name : names) {

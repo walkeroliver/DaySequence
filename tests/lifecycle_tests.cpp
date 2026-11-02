@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
+#include "journalpage.h"
+#include "journalstore.h"
 #include "mainwindow.h"
 #include <QProcess>
 #include <QTemporaryDir>
@@ -38,6 +40,11 @@ class LifecycleTests : public QObject {
         QCOMPARE(saved.tasks[0].title, QString("keep on exit"));
         QSettings settings(dir.filePath("settings.ini"), QSettings::IniFormat);
         QVERIFY(settings.contains("windowGeometry"));
+        JournalStore journal(dir.path());
+        JournalStore::Document document;
+        QString error;
+        QVERIFY2(journal.read(QDate::currentDate(), &document, &error), qPrintable(error));
+        QCOMPARE(document.text, QString("keep journal on exit"));
     }
 };
 int main(int argc, char **argv) {
@@ -59,6 +66,9 @@ int main(int argc, char **argv) {
     QObject::connect(&window, &MainWindow::exitRequested, &app, &QCoreApplication::quit,
                      Qt::QueuedConnection);
     window.show();
+    window.findChild<JournalPage *>()
+        ->findChild<QPlainTextEdit *>("journalEditor")
+        ->setPlainText("keep journal on exit");
     QTimer::singleShot(20, &window, [&] {
         auto tray = window.findChild<QSystemTrayIcon *>();
         if (scenario.endsWith("to-tray")) {

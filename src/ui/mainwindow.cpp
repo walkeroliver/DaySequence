@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include "choicebox.h"
 #include "focusclock.h"
+#include "journalpage.h"
 #include "storage.h"
 #include "tasklist.h"
 #include "weatherdata.h"
@@ -128,6 +129,9 @@ void MainWindow::build() {
     dailyNav = button("每日计划", "nav");
     reviewNav = button("月度回顾", "nav");
     clockNav = button("专注时钟", "nav");
+    journalNav = button("每日总结", "nav");
+    journalNav->setCheckable(true);
+    journalNav->setAccessibleName("每日总结");
     clockNav->setAccessibleName("专注时钟");
     clockNav->setCheckable(true);
     dailyNav->setCheckable(true);
@@ -135,6 +139,8 @@ void MainWindow::build() {
     side->addWidget(dailyNav);
     side->addWidget(reviewNav);
     side->addWidget(clockNav);
+    side->addWidget(journalNav);
+    connect(journalNav, &QPushButton::clicked, this, [this] { selectPage(3); });
     side->addStretch();
     auto quote = label("让每一个小目标\n都有完成的回响。", "sideQuote");
     side->addWidget(quote);
@@ -344,6 +350,13 @@ void MainWindow::build() {
             showTaskMenu(index.data(TaskListModel::IdRole).toString(),
                          taskList->viewport()->mapToGlobal(point));
     });
+    auto writeSummary = button("写这一天的总结", "secondary");
+    writeSummary->setObjectName("writeDailySummary");
+    tl->addWidget(writeSummary);
+    connect(writeSummary, &QPushButton::clicked, this, [this] {
+        selectPage(3);
+        journalPage->openDate(selected);
+    });
     tl->addWidget(label("双击文字编辑  ·  手动排序时可用 ↑ ↓ 调整顺序", "smallMuted"));
     dl->addWidget(tasks, 5);
     pages->addWidget(scrollPage(daily));
@@ -425,8 +438,10 @@ void MainWindow::build() {
     il->addWidget(insight);
     rl->addWidget(insightCard);
     pages->addWidget(scrollPage(review));
+    journalPage = new JournalPage(QFileInfo(model.filePath()).absolutePath());
     focusClock = new FocusClock(settings);
     pages->addWidget(scrollPage(focusClock));
+    pages->addWidget(journalPage);
     connect(focusClock, &FocusClock::completed, this, [this](bool) {
         if (tray && tray->isVisible())
             tray->showMessage("专注完成", "这一段专注已完成，起身活动一下吧。",
@@ -636,15 +651,23 @@ void MainWindow::editTask(const QString &id) {
         });
 }
 void MainWindow::selectPage(int page) {
+    if (page != 3 && journalPage && !journalPage->flush()) {
+        dailyNav->setChecked(pages->currentIndex() == 0);
+        reviewNav->setChecked(pages->currentIndex() == 1);
+        clockNav->setChecked(pages->currentIndex() == 2);
+        journalNav->setChecked(pages->currentIndex() == 3);
+        return;
+    }
     pages->setCurrentIndex(page);
     dailyNav->setChecked(page == 0);
     reviewNav->setChecked(page == 1);
     clockNav->setChecked(page == 2);
+    journalNav->setChecked(page == 3);
     const QStringList titles = {"把今天，过得有条理。", "每一份努力，都看得见。",
-                                "把此刻，留给一件事。"};
-    const QStringList subtitles = {"先安排重要的事，再一步一步完成。",
-                                   "回看一个月的节奏，为下个月留一点灵感。",
-                                   "设定一段时间，让注意力慢慢沉淀。"};
+                                "把此刻，留给一件事。", "给今天，留一页回响。"};
+    const QStringList subtitles = {
+        "先安排重要的事，再一步一步完成。", "回看一个月的节奏，为下个月留一点灵感。",
+        "设定一段时间，让注意力慢慢沉淀。", "记录完成，也记录成长。每一天都有值得留下的事。"};
     pageTitle->setText(titles.value(page));
     pageSubtitle->setText(subtitles.value(page));
 }
@@ -681,8 +704,17 @@ void MainWindow::setupTray() {
         weatherDetail = settings.value("weatherDetail", "正在等待天气更新").toString();
     }
 }
+bool MainWindow::flushJournal() {
+    if (!journalPage || journalPage->flush())
+        return true;
+    selectPage(3);
+    restoreWindow();
+    return false;
+}
 void MainWindow::requestExit() {
     if (quitting)
+        return;
+    if (!flushJournal())
         return;
     quitting = true;
     focusClock->stopAlarm();
@@ -694,6 +726,10 @@ void MainWindow::requestExit() {
     emit exitRequested();
 }
 void MainWindow::closeEvent(QCloseEvent *event) {
+    if (!quitting && !flushJournal()) {
+        event->ignore();
+        return;
+    }
     if (!quitting && tray && tray->isVisible()) {
         settings.setValue("windowGeometry", saveGeometry());
         settings.sync();
@@ -806,6 +842,20 @@ void MainWindow::preview(const QString &folder) {
     selectPage(2);
     QApplication::processEvents();
     grab().save(folder + "/clock.png");
+    selectPage(3);
+    if (auto editor = journalPage->findChild<QPlainTextEdit *>("journalEditor")) {
+        editor->setPlainText(
+            "# 今日小记\n\n## 今日完成\n\n- 完成产品方案的第一轮设计\n- 整理了本周的工作笔记\n\n## "
+            "收获与思考\n\n把重要的事情放在清晨，专注的时间比想象中更充实。\n\n> "
+            "不必追赶每一分钟，只要认真走好每一步。\n\n## 明日的方向\n\n- 为新方案收集反馈\n");
+        journalPage->flush();
+    }
+    QApplication::processEvents();
+    grab().save(folder + "/journal.png");
+    resize(1024, 700);
+    QApplication::processEvents();
+    grab().save(folder + "/journal-compact.png");
+    resize(1260, 894);
     for (const auto &id : QStringList{"chinese", "european", "american"}) {
         settings.setValue("theme", id);
         settings.setValue("weatherAuto", false);

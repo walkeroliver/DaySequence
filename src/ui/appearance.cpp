@@ -73,7 +73,15 @@ void MainWindow::applyTheme() {
         #monthSelector { font-size:11px; color:%4; background:transparent; padding:6px 4px; } #monthSelector:hover { color:%6; }
 
         QLineEdit,QDateEdit { background:%3; border:1px solid %5; border-radius:8px; padding:8px; selection-background-color:%6; }
+        QDateEdit::drop-down { border:0; width:20px; background:transparent; }
         QLineEdit:focus { border:1px solid %6; }
+        #journalEditor, #journalPreview { background:%3; color:%1; border:1px solid %5; border-radius:10px; padding:16px; font-size:14px; selection-background-color:%6; }
+        #journalEditor:focus { border:1px solid %6; }
+        #journalHistory { background:transparent; border:0; outline:none; }
+        #journalHistory::item { padding:12px 8px; margin:3px 0; border-radius:9px; }
+        #journalHistory::item:selected { background:%7; color:%6; }
+        #journalHistory::item:hover { background:%7; }
+        #journalStatus { color:%6; font-size:11px; }
         #taskList { background:transparent; border:0; outline:none; } #taskList::item { background:transparent; border:0; }
         QCheckBox::indicator { width:19px; height:19px; border:1px solid %4; border-radius:6px; background:%3; }
         QCheckBox::indicator:checked { background:%6; border:1px solid %6; image:url(:/check.svg); }

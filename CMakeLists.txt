@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(DaySequence VERSION 2.4.0 LANGUAGES CXX)
+project(DaySequence VERSION 2.5.0 LANGUAGES CXX)
 set(CMAKE_INSTALL_BINDIR ".")
 set(CMAKE_INSTALL_LIBDIR ".")
 set(CMAKE_CXX_STANDARD 17)
@@ -13,6 +13,7 @@ qt_add_library(daysequence_data STATIC
     src/core/countdown.cpp src/core/countdown.h
     src/services/weatherdata.cpp src/services/weatherdata.h
     src/services/storage.cpp src/services/storage.h
+    src/services/journalstore.cpp src/services/journalstore.h
 )
 target_include_directories(daysequence_data PUBLIC src/core src/services)
 target_link_libraries(daysequence_data PUBLIC Qt6::Core)
@@ -22,6 +23,7 @@ qt_add_library(daysequence_ui STATIC
     src/ui/mainwindow.cpp src/ui/mainwindow.h src/ui/appearance.cpp src/ui/preferences.cpp src/ui/weather.cpp
     src/ui/widgets/visuals.cpp src/ui/widgets/visuals.h
     src/ui/widgets/focusclock.cpp src/ui/widgets/focusclock.h
+    src/ui/widgets/journalpage.cpp src/ui/widgets/journalpage.h
     src/ui/widgets/tasklist.cpp src/ui/widgets/tasklist.h
     src/ui/widgets/choicebox.cpp src/ui/widgets/choicebox.h src/ui/widgets/pathlabel.h
     src/ui/components/icons.cpp src/ui/components/icons.h src/ui/components/uicomponents.h src/ui/components/centertip.h
@@ -59,7 +61,10 @@ if(BUILD_TESTING)
     qt_add_executable(lifecycle_tests tests/lifecycle_tests.cpp)
     target_link_libraries(lifecycle_tests PRIVATE daysequence_ui Qt6::Test)
     add_test(NAME lifecycle_tests COMMAND lifecycle_tests -platform offscreen)
-    set_tests_properties(planner_tests ui_tests storage_tests lifecycle_tests PROPERTIES TIMEOUT 30)
+    qt_add_executable(journal_tests tests/journal_tests.cpp)
+    target_link_libraries(journal_tests PRIVATE daysequence_ui Qt6::Test)
+    add_test(NAME journal_tests COMMAND journal_tests -platform offscreen)
+    set_tests_properties(planner_tests ui_tests storage_tests lifecycle_tests journal_tests PROPERTIES TIMEOUT 30)
 endif()
 install(TARGETS DaySequence RUNTIME DESTINATION .)
 qt_generate_deploy_app_script(TARGET DaySequence OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR NO_TRANSLATIONS DEPLOY_TOOL_OPTIONS --no-opengl-sw --no-system-d3d-compiler)
