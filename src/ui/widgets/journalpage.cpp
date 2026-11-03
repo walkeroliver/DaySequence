@@ -69,6 +69,8 @@ JournalPage::JournalPage(const QString &dataDirectory, QWidget *parent)
     datePicker->setObjectName("journalDate");
     datePicker->setDisplayFormat("yyyy-MM-dd");
     datePicker->setCalendarPopup(true);
+    datePicker->setKeyboardTracking(false);
+    datePicker->setAccessibleName("总结日期");
     datePicker->setDateRange(QDate(1, 1, 1), QDate(9999, 12, 31));
     top->addWidget(datePicker);
     auto today = button("今天", "secondary");
@@ -77,11 +79,13 @@ JournalPage::JournalPage(const QString &dataDirectory, QWidget *parent)
     auto toolbar = new QHBoxLayout;
     auto outline = button("插入提纲", "secondary");
     auto save = button("保存", "primary");
+    save->setToolTip("保存当前总结（Ctrl+S）");
     save->setObjectName("journalSave");
     auto reloadButton = button("重新读取", "secondary");
     auto exportButton = button("另存副本", "secondary");
     auto remove = button("删除", "secondary");
     remove->setObjectName("journalDelete");
+    remove->setToolTip("将当前总结移入回收目录");
     toolbar->addWidget(outline);
     toolbar->addStretch();
     for (auto b : {reloadButton, exportButton, remove, save})
@@ -89,6 +93,12 @@ JournalPage::JournalPage(const QString &dataDirectory, QWidget *parent)
     right->addLayout(toolbar);
     auto tabs = new QTabWidget;
     tabs->setObjectName("journalTabs");
+    tabs->tabBar()->setObjectName("journalModeBar");
+    tabs->tabBar()->setDrawBase(false);
+    new KeyboardFocusIndicator(tabs->tabBar());
+    tabs->tabBar()->setExpanding(false);
+    tabs->setDocumentMode(false);
+    tabs->tabBar()->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     editor = new QPlainTextEdit;
     editor->setObjectName("journalEditor");
     editor->setAccessibleName("每日总结 Markdown 编辑器");
@@ -100,14 +110,21 @@ JournalPage::JournalPage(const QString &dataDirectory, QWidget *parent)
     preview->setObjectName("journalPreview");
     preview->setOpenExternalLinks(false);
     preview->setOpenLinks(false);
-    tabs->addTab(editor, "编辑 Markdown");
+    tabs->addTab(editor, "编辑");
+    tabs->setTabToolTip(0, "使用 Markdown 编写每日总结");
     tabs->addTab(preview, "阅读预览");
     right->addWidget(tabs, 1);
     status = label("", "journalStatus");
     status->setWordWrap(true);
     status->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    right->addWidget(status);
-    right->addWidget(label("自动保存 · Ctrl+S 手动保存 · 每日一个 .md 文件", "smallMuted"));
+    auto footer = new QHBoxLayout;
+    footer->setSpacing(12);
+    footer->addWidget(status, 1);
+    characterCount = label("0 字符", "smallMuted");
+    characterCount->setObjectName("journalCharacterCount");
+    footer->addWidget(characterCount, 0, Qt::AlignTop);
+    right->addLayout(footer);
+    right->addWidget(label("自动保存 · Ctrl+S 立即保存", "smallMuted"));
     layout->addWidget(writing, 1);
     saveTimer = new QTimer(this);
     saveTimer->setSingleShot(true);
@@ -120,6 +137,7 @@ JournalPage::JournalPage(const QString &dataDirectory, QWidget *parent)
     connect(saveTimer, &QTimer::timeout, this, &JournalPage::flush);
     connect(editor, &QPlainTextEdit::textChanged, this, [this] {
         dirty = true;
+        updateCharacterCount();
         updateStatus("尚未保存 · 停止输入后自动保存");
         saveTimer->start();
     });
@@ -127,14 +145,21 @@ JournalPage::JournalPage(const QString &dataDirectory, QWidget *parent)
     auto shortcut = new QShortcut(QKeySequence::Save, this);
     connect(shortcut, &QShortcut::activated, this, &JournalPage::flush);
     connect(tabs, &QTabWidget::currentChanged, this, [this] { showPreview(); });
-    connect(outline, &QPushButton::clicked, this, [this] {
-        if (!editor->isReadOnly())
+    connect(outline, &QPushButton::clicked, this, [this, tabs] {
+        if (!editor->isReadOnly()) {
+            tabs->setCurrentIndex(0);
             editor->insertPlainText(
                 "## 今日完成\n\n- \n\n## 收获与思考\n\n\n## 明日的方向\n\n- \n");
+            editor->setFocus(Qt::OtherFocusReason);
+        }
     });
     connect(today, &QPushButton::clicked, this, [this] { openDate(QDate::currentDate()); });
     connect(datePicker, &QDateEdit::dateChanged, this, [this](QDate date) { openDate(date); });
     connect(history, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
+        if (!rebuilding)
+            openDate(item->data(Qt::UserRole).toDate());
+    });
+    connect(history, &QListWidget::itemActivated, this, [this](QListWidgetItem *item) {
         if (!rebuilding)
             openDate(item->data(Qt::UserRole).toDate());
     });
@@ -178,6 +203,7 @@ JournalPage::JournalPage(const QString &dataDirectory, QWidget *parent)
         snapshot = {};
         QSignalBlocker blocker(editor);
         editor->clear();
+        updateCharacterCount();
         showPreview();
         rebuildHistory();
         updateStatus("已移入回收目录 · 当前日期尚未创建新文档");
@@ -186,6 +212,11 @@ JournalPage::JournalPage(const QString &dataDirectory, QWidget *parent)
 }
 void JournalPage::updateStatus(const QString &message) {
     status->setText(message);
+    status->setToolTip(current.isValid() ? QDir::toNativeSeparators(store.path(current))
+                                         : QString());
+    status->setProperty("error", message.contains("失败") || message.contains("尚未保存"));
+    status->style()->unpolish(status);
+    status->style()->polish(status);
 }
 bool JournalPage::flush() {
     saveTimer->stop();
@@ -246,14 +277,39 @@ bool JournalPage::openDate(QDate date) {
         editor->setPlainText(loaded.text);
     }
     dirty = false;
+    updateCharacterCount();
     updateStatus(loaded.exists ? "已载入 · " + date.toString("yyyy-MM-dd") + ".md"
                                : "尚未创建文档 · 有内容后自动保存");
     showPreview();
     rebuildHistory();
     return true;
 }
+void JournalPage::updateCharacterCount() {
+    characterCount->setText(QString("%1 字符").arg(editor->toPlainText().toUcs4().size()));
+}
 void JournalPage::showPreview() {
     preview->setMarkdown(editor->toPlainText());
+    for (auto block = preview->document()->begin(); block.isValid(); block = block.next()) {
+        QTextCursor cursor(block);
+        auto layout = block.blockFormat();
+        const int level = layout.headingLevel();
+        layout.setLineHeight(level ? 120 : 135, QTextBlockFormat::ProportionalHeight);
+        layout.setTopMargin(block == preview->document()->begin() ? 0
+                            : level                               ? 12
+                            : block.textList()                    ? 0
+                                                                  : 2);
+        layout.setBottomMargin(level ? 6 : block.textList() ? 2 : 4);
+        cursor.setBlockFormat(layout);
+        if (level) {
+            cursor.select(QTextCursor::BlockUnderCursor);
+            QTextCharFormat headingStyle;
+            auto font = preview->document()->defaultFont();
+            font.setPixelSize(level == 1 ? 24 : level == 2 ? 19 : 16);
+            font.setWeight(QFont::DemiBold);
+            headingStyle.setFont(font);
+            cursor.mergeCharFormat(headingStyle);
+        }
+    }
 }
 void JournalPage::reload() {
     if (dirty && QMessageBox::question(
@@ -285,6 +341,9 @@ void JournalPage::rebuildHistory() {
             continue;
         QString title =
             valid ? document.text.section('\n', 0, 0).trimmed().left(36) : "文件暂不可读";
+        while (title.startsWith('#'))
+            title.remove(0, 1);
+        title = title.trimmed();
         if (title.isEmpty())
             title = "空白文档";
         auto item = new QListWidgetItem(date.toString("yyyy-MM-dd") + "\n" + title, history);
@@ -294,8 +353,9 @@ void JournalPage::rebuildHistory() {
             history->setCurrentItem(item);
     }
     counter->setText(
-        dates.isEmpty()
-            ? "还没有总结。\n写下今天的第一行吧。"
+        dates.isEmpty() ? "还没有总结。\n写下今天的第一行吧。"
+        : history->count() == 0
+            ? "没有匹配的总结。\n试试其他日期或关键词。"
             : QString("%1 篇总结 · 当前显示 %2 篇").arg(dates.size()).arg(history->count()));
     rebuilding = false;
 }

@@ -852,6 +852,16 @@ void MainWindow::preview(const QString &folder) {
     }
     QApplication::processEvents();
     grab().save(folder + "/journal.png");
+    journalNav->setFocus(Qt::MouseFocusReason);
+    QApplication::processEvents();
+    grab().save(folder + "/journal-nav-focus.png");
+    if (auto tabs = journalPage->findChild<QTabWidget *>("journalTabs")) {
+        tabs->setCurrentIndex(1);
+        tabs->tabBar()->setFocus(Qt::TabFocusReason);
+        QApplication::processEvents();
+        grab().save(folder + "/journal-preview.png");
+        tabs->setCurrentIndex(0);
+    }
     resize(1024, 700);
     QApplication::processEvents();
     grab().save(folder + "/journal-compact.png");
@@ -869,6 +879,10 @@ void MainWindow::preview(const QString &folder) {
         selectPage(2);
         QApplication::processEvents();
         grab().save(folder + "/clock-" + id + ".png");
+        selectPage(3);
+        journalNav->setFocus(Qt::MouseFocusReason);
+        QApplication::processEvents();
+        grab().save(folder + "/journal-" + id + ".png");
     }
     settings.setValue("theme", "forest");
     settings.setValue("weatherAuto", false);

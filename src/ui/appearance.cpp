@@ -66,7 +66,8 @@ void MainWindow::applyTheme() {
         #clockStart { background:%6; color:%3; font-weight:600; border-radius:10px; }
         #clockStart:hover { border:1px solid %6; }
         #clockReset { background:transparent; color:%4; } #clockReset:hover { background:%7; color:%6; }
-        #nav { text-align:left; padding:13px 12px; background:transparent; color:%4; font-size:14px; }
+        #nav { text-align:left; padding:12px 11px; background:transparent; color:%4; font-size:14px; outline:none; border:1px solid transparent; }
+        #nav[keyboardFocus="true"]:focus { border:1px solid %6; }
         #nav:checked { background:%7; color:%6; font-weight:600; } #nav:hover { background:%7; }
         #primary { background:%6; color:white; font-weight:600; } #primary:hover { padding:9px 13px; border:1px solid %6; }
         #secondary { background:%7; color:%6; font-size:12px; }
@@ -75,13 +76,29 @@ void MainWindow::applyTheme() {
         QLineEdit,QDateEdit { background:%3; border:1px solid %5; border-radius:8px; padding:8px; selection-background-color:%6; }
         QDateEdit::drop-down { border:0; width:20px; background:transparent; }
         QLineEdit:focus { border:1px solid %6; }
+        #journalModeBar { background:%7; border:0; border-radius:10px; qproperty-drawBase:0; }
+        #journalModeBar::tab { background:transparent; color:%4; padding:8px 16px; margin:3px; border:1px solid transparent; border-radius:7px; outline:none; }
+        #journalModeBar::tab:selected { background:%3; color:%6; font-weight:600; }
+        #journalModeBar::tab:hover { color:%6; }
+        #journalModeBar[keyboardFocus="true"]::tab:focus { border:1px solid %6; }
+        #journalTabs::pane { border:0; top:8px; }
+        #journalDate { padding:8px 24px 8px 10px; min-height:18px; selection-background-color:%7; selection-color:%6; }
+        #journalDate:focus { border:1px solid %6; }
+        #journalDate::drop-down { border:0; subcontrol-origin:padding; subcontrol-position:top right; width:20px; }
+        #journalDate::down-arrow { image:url(:/calendar.svg); width:14px; height:14px; }
+        #journalCharacterCount { color:%4; font-size:11px; }
+        #journalSave { background:%6; color:white; font-weight:600; min-width:44px; }
+        #journalDelete { background:transparent; color:%4; }
+        #journalDelete:hover { background:%7; color:%6; }
+        #journalStatus { color:%4; font-size:11px; }
+        #journalStatus[error="true"] { color:%6; }
         #journalEditor, #journalPreview { background:%3; color:%1; border:1px solid %5; border-radius:10px; padding:16px; font-size:14px; selection-background-color:%6; }
         #journalEditor:focus { border:1px solid %6; }
         #journalHistory { background:transparent; border:0; outline:none; }
         #journalHistory::item { padding:12px 8px; margin:3px 0; border-radius:9px; }
         #journalHistory::item:selected { background:%7; color:%6; }
         #journalHistory::item:hover { background:%7; }
-        #journalStatus { color:%6; font-size:11px; }
+
         #taskList { background:transparent; border:0; outline:none; } #taskList::item { background:transparent; border:0; }
         QCheckBox::indicator { width:19px; height:19px; border:1px solid %4; border-radius:6px; background:%3; }
         QCheckBox::indicator:checked { background:%6; border:1px solid %6; image:url(:/check.svg); }

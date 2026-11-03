@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(DaySequence VERSION 2.5.0 LANGUAGES CXX)
+project(DaySequence VERSION 2.5.1 LANGUAGES CXX)
 set(CMAKE_INSTALL_BINDIR ".")
 set(CMAKE_INSTALL_LIBDIR ".")
 set(CMAKE_CXX_STANDARD 17)
@@ -26,10 +26,10 @@ qt_add_library(daysequence_ui STATIC
     src/ui/widgets/journalpage.cpp src/ui/widgets/journalpage.h
     src/ui/widgets/tasklist.cpp src/ui/widgets/tasklist.h
     src/ui/widgets/choicebox.cpp src/ui/widgets/choicebox.h src/ui/widgets/pathlabel.h
-    src/ui/components/icons.cpp src/ui/components/icons.h src/ui/components/uicomponents.h src/ui/components/centertip.h
+    src/ui/components/icons.cpp src/ui/components/icons.h src/ui/components/uicomponents.h src/ui/components/centertip.h src/ui/components/focusindicator.h
 )
 target_include_directories(daysequence_ui PUBLIC src/ui src/ui/widgets src/ui/components)
-qt_add_resources(daysequence_ui icons PREFIX "/" BASE resources FILES resources/check.svg resources/app.svg resources/sounds/chime.wav resources/sounds/soft.wav resources/sounds/bell.wav)
+qt_add_resources(daysequence_ui icons PREFIX "/" BASE resources FILES resources/calendar.svg resources/check.svg resources/app.svg resources/sounds/chime.wav resources/sounds/soft.wav resources/sounds/bell.wav)
 target_link_libraries(daysequence_ui PUBLIC daysequence_data Qt6::Widgets Qt6::Network Qt6::Multimedia)
 qt_add_executable(DaySequence WIN32 src/app/main.cpp)
 target_compile_definitions(DaySequence PRIVATE DAYSEQUENCE_VERSION="${PROJECT_VERSION}")

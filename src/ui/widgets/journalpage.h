@@ -29,7 +29,8 @@ class JournalPage : public QWidget {
     QDateEdit *datePicker;
     QLineEdit *search;
     QListWidget *history;
-    QLabel *status, *heading, *counter;
+    QLabel *status, *heading, *counter, *characterCount;
+    void updateCharacterCount();
     QTimer *saveTimer, *searchTimer;
     void rebuildHistory();
     void showPreview();

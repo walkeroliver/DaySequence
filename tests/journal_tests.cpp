@@ -28,6 +28,76 @@ class JournalTests : public QObject {
         return nullptr;
     }
   private slots:
+    void navigationFocusHasNoInnerRectangle_data() {
+        QTest::addColumn<QString>("theme");
+        for (const auto &theme : {"chinese", "forest", "night"})
+            QTest::newRow(theme) << QString(theme);
+    }
+    void navigationFocusHasNoInnerRectangle() {
+        QFETCH(QString, theme);
+        QTemporaryDir dir;
+        {
+            QSettings settings(dir.filePath("settings.ini"), QSettings::IniFormat);
+            settings.setValue("theme", theme);
+        }
+        MainWindow window(dir.filePath("tasks.json"));
+        window.show();
+        window.activateWindow();
+        auto nav = button(window, QStringLiteral("每日总结"));
+        QVERIFY(nav);
+        nav->click();
+        auto page = window.findChild<JournalPage *>();
+        auto editor = page->findChild<QPlainTextEdit *>("journalEditor");
+        editor->setFocus();
+        QCoreApplication::processEvents();
+        const auto inside = nav->rect().adjusted(9, 9, -9, -9);
+        const auto before = nav->grab().toImage().copy(inside);
+        nav->setFocus(Qt::MouseFocusReason);
+        QCoreApplication::processEvents();
+        QVERIFY(nav->hasFocus());
+        QVERIFY(!nav->property("keyboardFocus").toBool());
+        QCOMPARE(nav->grab().toImage().copy(inside), before);
+        editor->setFocus();
+        nav->setFocus(Qt::TabFocusReason);
+        QCoreApplication::processEvents();
+        QVERIFY(nav->property("keyboardFocus").toBool());
+        QCOMPARE(nav->grab().toImage().copy(inside), before);
+        QTest::keyClick(nav, Qt::Key_Space);
+        QVERIFY(page->isVisible());
+    }
+    void journalControlsKeepEditingAndPreviewConsistent() {
+        QTemporaryDir dir;
+        JournalPage page(dir.path());
+        page.resize(760, 600);
+        page.show();
+        auto editor = page.findChild<QPlainTextEdit *>("journalEditor");
+        auto tabs = page.findChild<QTabWidget *>("journalTabs");
+        QVERIFY(tabs);
+        QVERIFY(!tabs->tabBar()->drawBase());
+        auto datePicker = page.findChild<QDateEdit *>("journalDate");
+        QVERIFY(datePicker && datePicker->calendarPopup());
+        QTest::mouseClick(datePicker, Qt::LeftButton, Qt::NoModifier,
+                          QPoint(datePicker->width() - 10, datePicker->height() / 2));
+        QTRY_VERIFY(datePicker->calendarWidget()->isVisible());
+        QTest::keyClick(datePicker->calendarWidget(), Qt::Key_Escape);
+
+        editor->setPlainText(QString::fromUtf8("# 测试 🌿"));
+        QCOMPARE(page.findChild<QLabel *>("journalCharacterCount")->text(),
+                 QStringLiteral("6 字符"));
+        QVERIFY(page.flush());
+        QCOMPARE(page.findChild<QListWidget *>("journalHistory")->item(0)->text().section('\n', 1),
+                 QString::fromUtf8("测试 🌿"));
+        tabs->setCurrentIndex(1);
+        auto preview = page.findChild<QTextBrowser *>("journalPreview");
+        QVERIFY(preview->document()->begin().blockFormat().bottomMargin() > 0);
+        button(page, QStringLiteral("插入提纲"))->click();
+        QCOMPARE(tabs->currentIndex(), 0);
+        QVERIFY(editor->toPlainText().contains(QStringLiteral("今日完成")));
+        auto search = page.findChild<QLineEdit *>("journalSearch");
+        search->setText("definitely absent");
+        QTRY_COMPARE(page.findChild<QListWidget *>("journalHistory")->count(), 0);
+        QVERIFY(page.flush());
+    }
     void blankDaysCreateNothingAndMarkdownRoundTrips() {
         QTemporaryDir dir;
         JournalStore store(dir.path());

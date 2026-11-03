@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 WalkerOliver
 #pragma once
+#include "focusindicator.h"
 #include <QFrame>
 #include <QLabel>
 #include <QPushButton>
@@ -17,6 +18,8 @@ inline QPushButton *button(const QString &text, const QString &name = {}) {
     auto widget = new QPushButton(text);
     widget->setObjectName(name);
     widget->setCursor(Qt::PointingHandCursor);
+    if (name == "nav")
+        new KeyboardFocusIndicator(widget);
     return widget;
 }
 inline QFrame *card() {
